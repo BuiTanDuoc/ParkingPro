@@ -35,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<IPricingService, PricingService>();
         services.AddScoped<IMonthlyContractService, MonthlyContractService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IReportService, ReportService>();
 
         // --- Security ---
         services.Configure<JwtSettings>(configuration.GetSection("Jwt"));

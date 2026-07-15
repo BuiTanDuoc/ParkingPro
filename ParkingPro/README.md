@@ -81,13 +81,17 @@ Dữ liệu được tạo sẵn:
 - Domain: đầy đủ Entities + Enums (ParkingLot, Zone, ParkingSlot, Vehicle, PricingPlan, ParkingSession, MonthlyContract, Payment, User, RefreshToken, Shift, Notification)
 - Application: Service Layer đầy đủ cho check-in/check-out theo giờ & ngày, tính phí (bậc giá giờ đầu/giờ sau + phụ phí qua đêm), quản lý hợp đồng vé tháng (tạo/gia hạn/hủy), Auth (login, refresh token với family-based reuse detection, đăng ký khách hàng)
 - Infrastructure: EF Core DbContext (soft-delete filter, audit tự động), Generic Repository + UnitOfWork (hỗ trợ transaction), SignalR Hub + Notifier, JWT + BCrypt, RBAC (RequireRoleAttribute/RolePolicyProvider/RoleAuthorizationHandler)
-- API: Controllers cho Auth/Sessions/Slots/MonthlyContracts, ExceptionHandlingMiddleware, CORS, Swagger có nút Authorize
+- API: Controllers cho Auth/Sessions/Slots/MonthlyContracts/Reports, ExceptionHandlingMiddleware, CORS, Swagger có nút Authorize
 - Data Seeder tự động chạy ở Development: tài khoản Admin/Manager/Staff mẫu, 1 bãi xe, 2 khu, 40 slot, bảng giá đủ 3 hình thức
 - 1 Unit test mẫu cho PricingService (tính phí theo giờ)
 
 ## Chưa làm trong bản scaffold này (gợi ý bước tiếp theo)
 
-- ReportsController + logic báo cáo doanh thu/occupancy (DTO đã có sẵn ở `DTOs/Reports`)
 - Hangfire job: tự động nhắc gia hạn vé tháng sắp hết hạn, tự khóa hợp đồng quá hạn chưa thanh toán
 - Tích hợp cổng thanh toán thực tế (hiện `PaymentMethod`/`PaymentStatus` mới ở mức model)
 - Upload ảnh check-in/check-out (hiện chỉ lưu URL, chưa có endpoint upload)
+
+**Về báo cáo doanh thu (`GET /api/reports/revenue`):** doanh thu vé tháng (`MonthlyRevenue`) được
+tính theo ngày **thanh toán** (`Payment.PaidAtUtc`). `MonthlyContractService.CreateAsync` (thu trọn
+gói theo số tháng đăng ký) và `RenewAsync` (thu theo số tháng gia hạn) đều đã tự tạo `Payment` tương
+ứng trong cùng transaction, nên số liệu báo cáo phản ánh đúng các giao dịch thực tế.

@@ -12,17 +12,19 @@ namespace ParkingPro.API.Controllers;
 public class MonthlyContractsController : ControllerBase
 {
     private readonly IMonthlyContractService _contractService;
+    private readonly ICurrentUserService _currentUser;
 
-    public MonthlyContractsController(IMonthlyContractService contractService)
+    public MonthlyContractsController(IMonthlyContractService contractService, ICurrentUserService currentUser)
     {
         _contractService = contractService;
+        _currentUser = currentUser;
     }
 
     [HttpPost]
     [RequireRole("Admin", "Manager", "Staff")]
     public async Task<IActionResult> Create(CreateMonthlyContractRequest request, CancellationToken ct)
     {
-        var result = await _contractService.CreateAsync(request, ct);
+        var result = await _contractService.CreateAsync(request, _currentUser.UserId!.Value, ct);
         return CreatedAtAction(nameof(Create), new { id = result.Id }, result);
     }
 
@@ -30,7 +32,7 @@ public class MonthlyContractsController : ControllerBase
     [RequireRole("Admin", "Manager", "Staff")]
     public async Task<IActionResult> Renew(Guid id, [FromQuery] int additionalMonths, CancellationToken ct)
     {
-        var result = await _contractService.RenewAsync(id, additionalMonths, ct);
+        var result = await _contractService.RenewAsync(id, additionalMonths, _currentUser.UserId!.Value, ct);
         return Ok(result);
     }
 

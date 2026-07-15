@@ -19,7 +19,7 @@ public class MonthlyContractService : IMonthlyContractService
         _pricingService = pricingService;
     }
 
-    public async Task<MonthlyContractDto> CreateAsync(CreateMonthlyContractRequest request, CancellationToken ct = default)
+    public async Task<MonthlyContractDto> CreateAsync(CreateMonthlyContractRequest request, Guid staffUserId, CancellationToken ct = default)
     {
         if (request.NumberOfMonths <= 0)
             throw new BadRequestException("Số tháng đăng ký phải lớn hơn 0.");
@@ -68,9 +68,21 @@ public class MonthlyContractService : IMonthlyContractService
             AutoRenew = request.AutoRenew
         };
 
+        // Thu tiền trọn gói ngay lúc đăng ký, theo số tháng đã chọn
+        var payment = new Payment
+        {
+            MonthlyContract = contract,
+            Amount = monthlyFee * request.NumberOfMonths,
+            Method = PaymentMethod.TienMat,
+            Status = PaymentStatus.DaThanhToan,
+            ReceivedByStaffId = staffUserId,
+            PaidAtUtc = DateTime.UtcNow
+        };
+
         await _uow.ExecuteInTransactionAsync(async () =>
         {
             await _uow.MonthlyContracts.AddAsync(contract, ct);
+            await _uow.Payments.AddAsync(payment, ct);
 
             if (fixedSlot is not null)
             {
@@ -85,7 +97,7 @@ public class MonthlyContractService : IMonthlyContractService
         return MapToDto(contract);
     }
 
-    public async Task<MonthlyContractDto> RenewAsync(Guid contractId, int additionalMonths, CancellationToken ct = default)
+    public async Task<MonthlyContractDto> RenewAsync(Guid contractId, int additionalMonths, Guid staffUserId, CancellationToken ct = default)
     {
         if (additionalMonths <= 0)
             throw new BadRequestException("Số tháng gia hạn phải lớn hơn 0.");
@@ -103,8 +115,22 @@ public class MonthlyContractService : IMonthlyContractService
         contract.EndDate = baseDate.AddMonths(additionalMonths);
         contract.Status = ContractStatus.DangHoatDong;
 
-        _uow.MonthlyContracts.Update(contract);
-        await _uow.SaveChangesAsync(ct);
+        var payment = new Payment
+        {
+            MonthlyContractId = contract.Id,
+            Amount = contract.MonthlyFee * additionalMonths,
+            Method = PaymentMethod.TienMat,
+            Status = PaymentStatus.DaThanhToan,
+            ReceivedByStaffId = staffUserId,
+            PaidAtUtc = DateTime.UtcNow
+        };
+
+        await _uow.ExecuteInTransactionAsync(async () =>
+        {
+            _uow.MonthlyContracts.Update(contract);
+            await _uow.Payments.AddAsync(payment, ct);
+            await _uow.SaveChangesAsync(ct);
+        }, ct);
 
         return MapToDto(contract);
     }
