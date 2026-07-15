@@ -69,6 +69,35 @@ Dữ liệu được tạo sẵn:
 Ở **Production**, middleware seed/migrate tự động bị tắt (chỉ chạy khi `IsDevelopment()`) — cần chạy
 `dotnet ef database update` thủ công như hướng dẫn ở trên.
 
+## Hangfire — Job nhắc gia hạn / tự hết hạn vé tháng
+
+Chạy tự động, không cần gọi API. Được đăng ký lúc khởi động (`Program.cs`) qua `RecurringJob.AddOrUpdate`:
+
+| Job | Lịch chạy | Việc làm |
+|---|---|---|
+| `remind-expiring-monthly-contracts` | 8h sáng mỗi ngày | Tìm hợp đồng `DangHoatDong` sắp hết hạn trong N ngày tới (cấu hình ở `Jobs:MonthlyContractReminderWithinDays`, mặc định 7), tạo `Notification` nhắc khách hàng, chuyển `Status` sang `SapHetHan` |
+| `expire-overdue-monthly-contracts` | 1h sáng mỗi ngày | Tìm hợp đồng đã quá `EndDate` nhưng chưa gia hạn, chuyển `Status` sang `HetHan`, giải phóng slot cố định (`FixedSlot`) về `Trong`, tạo `Notification` báo hết hạn |
+
+Logic nghiệp vụ nằm ở `IMonthlyContractMaintenanceService` (Application layer) — Hangfire chỉ gọi thẳng
+2 method này theo lịch, không có gì đặc biệt phải học thêm ngoài cú pháp `RecurringJob.AddOrUpdate`.
+
+**Hangfire Dashboard** (`/hangfire`) để xem lịch sử job, retry job lỗi, trigger chạy thủ công:
+- Ở **Development**: mở tự do, không cần đăng nhập.
+- Ở **môi trường khác**: bắt buộc HTTP Basic Auth (không dùng chung JWT vì đây là trang trình duyệt truy cập trực tiếp, không tiện đính kèm Bearer token). Đổi tài khoản trong `appsettings.Production.json` → `Hangfire:DashboardUsername` / `Hangfire:DashboardPassword` — **bắt buộc đổi trước khi deploy**, app sẽ ném exception lúc khởi động nếu chưa cấu hình `DashboardPassword` khi không phải Development.
+
+⚠️ Hangfire tự tạo các bảng riêng (schema `HangFire`) trong cùng DB ở `ConnectionStrings:DefaultConnection`
+lúc chạy lần đầu — không cần thêm migration thủ công cho phần này.
+
+⚠️ `Cron.Daily(...)` chạy theo giờ UTC theo mặc định (không truyền `TimeZoneInfo`). Nếu muốn job chạy
+đúng 8h sáng giờ Việt Nam (UTC+7), sửa lời gọi thành:
+```csharp
+RecurringJob.AddOrUpdate<IMonthlyContractMaintenanceService>(
+    "remind-expiring-monthly-contracts",
+    service => service.RemindExpiringContractsAsync(reminderWithinDays, CancellationToken.None),
+    Cron.Daily(8),
+    new RecurringJobOptions { TimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time") });
+```
+
 ## Lưu ý quan trọng trước khi build
 
 1. **Package `BCrypt.Net-Next`** đã khai báo trong `ParkingPro.Infrastructure.csproj` — cần `dotnet restore` để tải về.
@@ -83,13 +112,14 @@ Dữ liệu được tạo sẵn:
 - Infrastructure: EF Core DbContext (soft-delete filter, audit tự động), Generic Repository + UnitOfWork (hỗ trợ transaction), SignalR Hub + Notifier, JWT + BCrypt, RBAC (RequireRoleAttribute/RolePolicyProvider/RoleAuthorizationHandler)
 - API: Controllers cho Auth/Sessions/Slots/MonthlyContracts/Reports, ExceptionHandlingMiddleware, CORS, Swagger có nút Authorize
 - Data Seeder tự động chạy ở Development: tài khoản Admin/Manager/Staff mẫu, 1 bãi xe, 2 khu, 40 slot, bảng giá đủ 3 hình thức
+- Hangfire: 2 recurring job (nhắc gia hạn vé tháng sắp hết hạn, tự chuyển hợp đồng quá hạn sang HetHan + giải phóng slot), Dashboard bảo vệ bằng Basic Auth ngoài Development
 - 1 Unit test mẫu cho PricingService (tính phí theo giờ)
 
 ## Chưa làm trong bản scaffold này (gợi ý bước tiếp theo)
 
-- Hangfire job: tự động nhắc gia hạn vé tháng sắp hết hạn, tự khóa hợp đồng quá hạn chưa thanh toán
 - Tích hợp cổng thanh toán thực tế (hiện `PaymentMethod`/`PaymentStatus` mới ở mức model)
 - Upload ảnh check-in/check-out (hiện chỉ lưu URL, chưa có endpoint upload)
+- Gửi thông báo qua kênh thực tế (SMS/push/email) — hiện `Notification` chỉ lưu vào DB, chưa có tích hợp Twilio/Firebase như dự án Sổ Tiết Kiệm trước đây
 
 **Về báo cáo doanh thu (`GET /api/reports/revenue`):** doanh thu vé tháng (`MonthlyRevenue`) được
 tính theo ngày **thanh toán** (`Payment.PaidAtUtc`). `MonthlyContractService.CreateAsync` (thu trọn

@@ -1,4 +1,5 @@
 using System.Text;
+using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -36,6 +37,22 @@ public static class DependencyInjection
         services.AddScoped<IMonthlyContractService, MonthlyContractService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IReportService, ReportService>();
+        services.AddScoped<IMonthlyContractMaintenanceService, MonthlyContractMaintenanceService>();
+
+        // --- Hangfire (background job: nhắc gia hạn vé tháng, tự hết hạn hợp đồng quá hạn) ---
+        services.AddHangfire(config => config
+            .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+            .UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UseSqlServerStorage(configuration.GetConnectionString("DefaultConnection"), new Hangfire.SqlServer.SqlServerStorageOptions
+            {
+                CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+                SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+                QueuePollInterval = TimeSpan.Zero,
+                UseRecommendedIsolationLevel = true,
+                DisableGlobalLocks = true
+            }));
+        services.AddHangfireServer();
 
         // --- Security ---
         services.Configure<JwtSettings>(configuration.GetSection("Jwt"));
