@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>ParkingPro.Infrastructure</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Cần thiết vì đây là class library (Microsoft.NET.Sdk), không phải Web SDK,
+         nên phải khai báo tường minh để dùng được các API nằm trong shared framework
+         của ASP.NET Core (SignalR Hub, IHttpContextAccessor...).
+         Lưu ý: JwtBearer KHÔNG nằm trong shared framework này, vẫn cần PackageReference riêng bên dưới. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.8">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <!-- Bắt buộc để chạy Add-Migration / Update-Database trong Package Manager Console (Visual Studio).
+         dotnet ef CLI chỉ cần gói Design ở trên, nhưng PMC cần thêm gói Tools này. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.8">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.8" />
+    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ParkingPro.Application\ParkingPro.Application.csproj" />
+    <ProjectReference Include="..\ParkingPro.Domain\ParkingPro.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

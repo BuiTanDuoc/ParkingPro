@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>ParkingPro.API</RootNamespace>
+    <UserSecretsId>parkingpro-api-secrets</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+    <!-- EF Core Tools yêu cầu chính startup project (project chứa Program.cs) phải
+         tham chiếu trực tiếp 2 gói này, dù ParkingPro.Infrastructure (nơi đặt AppDbContext)
+         đã có sẵn — vì bên đó khai báo PrivateAssets="all" nên không truyền qua ProjectReference. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.8">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.8">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ParkingPro.Application\ParkingPro.Application.csproj" />
+    <ProjectReference Include="..\ParkingPro.Infrastructure\ParkingPro.Infrastructure.csproj" />
+    <ProjectReference Include="..\ParkingPro.Domain\ParkingPro.Domain.csproj" />
+    <ProjectReference Include="..\ParkingPro.Shared\ParkingPro.Shared.csproj" />
+  </ItemGroup>
+
+</Project>
