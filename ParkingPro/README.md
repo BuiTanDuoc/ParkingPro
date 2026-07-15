@@ -48,6 +48,27 @@ dotnet run --project src/ParkingPro.API
 
 Swagger UI: `https://localhost:7080/swagger` (Development).
 
+## Dữ liệu mẫu (Data Seeder)
+
+Khi chạy ở môi trường **Development**, `Program.cs` tự động gọi `dbContext.Database.MigrateAsync()`
+rồi `DataSeeder.SeedAsync(...)` (tại `ParkingPro.Infrastructure/Persistence/Seed/DataSeeder.cs`).
+Seeder tự bỏ qua nếu đã có `ParkingLot` trong DB (idempotent), nên chạy `dotnet run` nhiều lần vẫn an toàn.
+
+Dữ liệu được tạo sẵn:
+
+| Loại | Chi tiết |
+|---|---|
+| Tài khoản | `admin@parkingpro.vn` / `Admin@123` (Admin), `manager@parkingpro.vn` / `Manager@123` (Manager), `staff@parkingpro.vn` / `Staff@123` (Staff) |
+| Bãi xe | "Bãi xe Trung Tâm Quận 1", 40 slot |
+| Khu vực | "Tầng trệt" (Floor 0), "Tầng hầm B1" (Floor -1) |
+| Slot | A-01..A-20 (tầng trệt, thường), B-01..B-15 (hầm, thường), B-16..B-20 (hầm, dành vé tháng) |
+| Bảng giá | Đủ 3 hình thức (giờ/ngày/tháng) cho Ô tô dưới 7 chỗ & trên 7 chỗ |
+
+⚠️ Đổi mật khẩu các tài khoản mẫu này (hoặc xóa hẳn logic seed user) trước khi lên production.
+
+Ở **Production**, middleware seed/migrate tự động bị tắt (chỉ chạy khi `IsDevelopment()`) — cần chạy
+`dotnet ef database update` thủ công như hướng dẫn ở trên.
+
 ## Lưu ý quan trọng trước khi build
 
 1. **Package `BCrypt.Net-Next`** đã khai báo trong `ParkingPro.Infrastructure.csproj` — cần `dotnet restore` để tải về.
@@ -61,12 +82,12 @@ Swagger UI: `https://localhost:7080/swagger` (Development).
 - Application: Service Layer đầy đủ cho check-in/check-out theo giờ & ngày, tính phí (bậc giá giờ đầu/giờ sau + phụ phí qua đêm), quản lý hợp đồng vé tháng (tạo/gia hạn/hủy), Auth (login, refresh token với family-based reuse detection, đăng ký khách hàng)
 - Infrastructure: EF Core DbContext (soft-delete filter, audit tự động), Generic Repository + UnitOfWork (hỗ trợ transaction), SignalR Hub + Notifier, JWT + BCrypt, RBAC (RequireRoleAttribute/RolePolicyProvider/RoleAuthorizationHandler)
 - API: Controllers cho Auth/Sessions/Slots/MonthlyContracts, ExceptionHandlingMiddleware, CORS, Swagger có nút Authorize
+- Data Seeder tự động chạy ở Development: tài khoản Admin/Manager/Staff mẫu, 1 bãi xe, 2 khu, 40 slot, bảng giá đủ 3 hình thức
 - 1 Unit test mẫu cho PricingService (tính phí theo giờ)
 
 ## Chưa làm trong bản scaffold này (gợi ý bước tiếp theo)
 
 - ReportsController + logic báo cáo doanh thu/occupancy (DTO đã có sẵn ở `DTOs/Reports`)
 - Hangfire job: tự động nhắc gia hạn vé tháng sắp hết hạn, tự khóa hợp đồng quá hạn chưa thanh toán
-- Data Seeder cho dữ liệu mẫu (ParkingLot/Zone/Slot/PricingPlan/tài khoản Admin đầu tiên)
 - Tích hợp cổng thanh toán thực tế (hiện `PaymentMethod`/`PaymentStatus` mới ở mức model)
 - Upload ảnh check-in/check-out (hiện chỉ lưu URL, chưa có endpoint upload)

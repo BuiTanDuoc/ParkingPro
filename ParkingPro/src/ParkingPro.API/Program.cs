@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using ParkingPro.API.Middleware;
 using ParkingPro.Infrastructure;
 using ParkingPro.Infrastructure.Hubs;
@@ -66,5 +67,18 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<ParkingHub>("/hubs/parking");
+
+// --- Tự động áp dụng migration + seed dữ liệu mẫu (chỉ ở Development) ---
+// Ở Production nên chạy migration thủ công (dotnet ef database update) để tránh
+// rủi ro tự đổi schema DB thật lúc deploy.
+if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<ParkingPro.Infrastructure.Persistence.AppDbContext>();
+    var passwordHasher = scope.ServiceProvider.GetRequiredService<ParkingPro.Application.Interfaces.Services.IPasswordHasher>();
+
+    await dbContext.Database.MigrateAsync();
+    await ParkingPro.Infrastructure.Persistence.Seed.DataSeeder.SeedAsync(dbContext, passwordHasher);
+}
 
 app.Run();
