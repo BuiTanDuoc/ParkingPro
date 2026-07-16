@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using ParkingPro.API.Common;
+using ParkingPro.API.Requests;
 using ParkingPro.Application.Interfaces.Services;
 
 namespace ParkingPro.API.Controllers;
@@ -31,12 +31,12 @@ public class UsersController : ControllerBase
     /// <summary>Upload/thay avatar cho tài khoản đang đăng nhập. Bắt buộc phải có file (không có endpoint này thì cứ dùng ảnh mặc định).</summary>
     [HttpPost("me/avatar")]
     [Consumes("multipart/form-data")]
-    public async Task<IActionResult> UpdateAvatar(IFormFile avatar, CancellationToken ct)
+    public async Task<IActionResult> UpdateAvatar([FromForm] UpdateAvatarFormRequest form, CancellationToken ct)
     {
-        UploadValidation.EnsureValidImage(avatar);
+        UploadValidation.EnsureValidImage(form.Avatar);
 
         var avatarUrl = await _userService.UpdateAvatarAsync(
-            _currentUser.UserId!.Value, avatar.OpenReadStream(), avatar.FileName, ct);
+            _currentUser.UserId!.Value, form.Avatar.OpenReadStream(), form.Avatar.FileName, ct);
 
         return Ok(new { avatarUrl });
     }

@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using ParkingPro.API.Common;
 using ParkingPro.API.Requests;
@@ -49,15 +48,15 @@ public class ParkingSessionsController : ControllerBase
     [HttpPost("{id:guid}/check-out")]
     [Consumes("multipart/form-data")]
     [RequireRole("Admin", "Manager", "Staff")]
-    public async Task<IActionResult> CheckOut(Guid id, [FromForm] IFormFile? photo, CancellationToken ct)
+    public async Task<IActionResult> CheckOut(Guid id, [FromForm] CheckOutFormRequest form, CancellationToken ct)
     {
         Stream? photoStream = null;
         string? photoFileName = null;
-        if (photo is not null)
+        if (form.Photo is not null)
         {
-            UploadValidation.EnsureValidImage(photo);
-            photoStream = photo.OpenReadStream();
-            photoFileName = photo.FileName;
+            UploadValidation.EnsureValidImage(form.Photo);
+            photoStream = form.Photo.OpenReadStream();
+            photoFileName = form.Photo.FileName;
         }
 
         var result = await _sessionService.CheckOutAsync(id, _currentUser.UserId!.Value, photoStream, photoFileName, ct);
