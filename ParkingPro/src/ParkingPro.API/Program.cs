@@ -44,10 +44,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AdminWebCors", policy =>
     {
-        policy.WithOrigins(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>())
+        policy.AllowAnyOrigin()
               .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials(); // cần thiết để SignalR gửi kèm cookie/token
+              .AllowAnyMethod();
+              //.AllowCredentials(); // cần thiết để SignalR gửi kèm cookie/token
     });
 });
 
