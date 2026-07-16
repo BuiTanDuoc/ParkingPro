@@ -5,4 +5,5 @@ public record CheckInResponse(
     string LicensePlate,
     string SlotCode,
     DateTime CheckInAtUtc,
-    string SessionType);
+    string SessionType,
+    string CheckInImageUrl);

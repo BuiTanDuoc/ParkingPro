@@ -3,6 +3,7 @@ namespace ParkingPro.Application.DTOs.MonthlyContracts;
 public record MonthlyContractDto(
     Guid Id,
     string LicensePlate,
+    string? VehiclePhotoUrl,
     string CustomerName,
     string? FixedSlotCode,
     DateOnly StartDate,

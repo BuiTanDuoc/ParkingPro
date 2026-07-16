@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ParkingPro.API.Common;
+using ParkingPro.API.Requests;
 using ParkingPro.Application.DTOs.MonthlyContracts;
 using ParkingPro.Application.Interfaces.Services;
 using ParkingPro.Infrastructure.Authorization;
@@ -20,11 +22,26 @@ public class MonthlyContractsController : ControllerBase
         _currentUser = currentUser;
     }
 
+    /// <summary>Tạo hợp đồng vé tháng. Ảnh xe (VehiclePhoto) không bắt buộc — không gửi thì dùng ảnh mặc định.</summary>
     [HttpPost]
+    [Consumes("multipart/form-data")]
     [RequireRole("Admin", "Manager", "Staff")]
-    public async Task<IActionResult> Create(CreateMonthlyContractRequest request, CancellationToken ct)
+    public async Task<IActionResult> Create([FromForm] CreateMonthlyContractFormRequest form, CancellationToken ct)
     {
-        var result = await _contractService.CreateAsync(request, _currentUser.UserId!.Value, ct);
+        var request = new CreateMonthlyContractRequest(
+            form.ParkingLotId, form.CustomerUserId, form.LicensePlate,
+            form.FixedSlotId, form.StartDate, form.NumberOfMonths, form.AutoRenew);
+
+        Stream? photoStream = null;
+        string? photoFileName = null;
+        if (form.VehiclePhoto is not null)
+        {
+            UploadValidation.EnsureValidImage(form.VehiclePhoto);
+            photoStream = form.VehiclePhoto.OpenReadStream();
+            photoFileName = form.VehiclePhoto.FileName;
+        }
+
+        var result = await _contractService.CreateAsync(request, _currentUser.UserId!.Value, photoStream, photoFileName, ct);
         return CreatedAtAction(nameof(Create), new { id = result.Id }, result);
     }
 

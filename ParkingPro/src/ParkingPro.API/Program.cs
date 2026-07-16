@@ -63,6 +63,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Serve file tĩnh dưới wwwroot/uploads (avatar, ảnh xe, ảnh check-in/out, ảnh mặc định)
+// qua đường dẫn "/uploads/..." — dùng bởi LocalFileStorageService.
+app.UseStaticFiles();
+
 app.UseCors("AdminWebCors");
 
 app.UseAuthentication();

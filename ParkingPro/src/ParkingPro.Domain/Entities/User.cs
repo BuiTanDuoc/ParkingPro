@@ -12,5 +12,8 @@ public class User : BaseEntity
     public UserRole Role { get; set; } = UserRole.Customer;
     public bool IsActive { get; set; } = true;
 
+    /// <summary>Đường dẫn tương đối (vd "/uploads/avatars/xxx.jpg"). Null/rỗng = dùng ảnh mặc định.</summary>
+    public string? AvatarUrl { get; set; }
+
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
 }

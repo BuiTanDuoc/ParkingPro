@@ -7,5 +7,4 @@ public record CheckInRequest(
     string LicensePlate,
     VehicleType VehicleType,
     SessionType SessionType,
-    Guid? PreferredSlotId,
-    string? CheckInImageUrl);
+    Guid? PreferredSlotId);

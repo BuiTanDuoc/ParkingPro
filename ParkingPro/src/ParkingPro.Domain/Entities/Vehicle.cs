@@ -10,6 +10,9 @@ public class Vehicle : BaseEntity
     public string? Brand { get; set; }
     public string? Color { get; set; }
 
+    /// <summary>Đường dẫn tương đối (vd "/uploads/vehicles/xxx.jpg"). Null/rỗng = dùng ảnh mặc định.</summary>
+    public string? PhotoUrl { get; set; }
+
     // Chủ xe (tùy chọn, có thể null với khách vãng lai không có tài khoản)
     public Guid? OwnerUserId { get; set; }
     public User? OwnerUser { get; set; }

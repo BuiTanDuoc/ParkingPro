@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200" width="300" height="200">
+  <rect width="300" height="200" fill="#0f1117"/>
+  <rect x="40" y="100" width="220" height="50" rx="10" fill="#4f8ef7"/>
+  <path d="M70 100 L95 65 H205 L230 100 Z" fill="#4f8ef7"/>
+  <circle cx="90" cy="152" r="16" fill="#0f1117" stroke="#8a94a6" stroke-width="4"/>
+  <circle cx="210" cy="152" r="16" fill="#0f1117" stroke="#8a94a6" stroke-width="4"/>
+  <text x="150" y="185" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#8a94a6">No Vehicle Photo</text>
+</svg>

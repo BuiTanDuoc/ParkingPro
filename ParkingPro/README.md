@@ -98,6 +98,27 @@ RecurringJob.AddOrUpdate<IMonthlyContractMaintenanceService>(
     new RecurringJobOptions { TimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time") });
 ```
 
+## Upload ảnh (avatar / ảnh xe / ảnh check-in-out)
+
+Tất cả đều **không bắt buộc** — không gửi ảnh thì API tự dùng ảnh mặc định (SVG đặt sẵn tại
+`wwwroot/uploads/defaults/`). File được lưu trực tiếp trên đĩa dưới `wwwroot/uploads/{loại}/{guid}.{ext}`
+qua `IFileStorageService` (implementation mặc định: `LocalFileStorageService`), phục vụ qua
+`app.UseStaticFiles()` — truy cập bằng đường dẫn tương đối trả về trong response, vd `/uploads/vehicles/xxx.jpg`.
+
+| Endpoint | Field ảnh | Mặc định khi không gửi |
+|---|---|---|
+| `POST /api/users/me/avatar` (multipart, field `avatar`, **bắt buộc phải có file** ở chính endpoint này) | avatar | `/uploads/defaults/default-avatar.svg` |
+| `POST /api/monthly-contracts` (multipart, field `VehiclePhoto`, không bắt buộc) | ảnh xe | `/uploads/defaults/default-vehicle.svg` |
+| `POST /api/sessions/check-in` (multipart, field `Photo`, không bắt buộc) | ảnh check-in | `/uploads/defaults/default-checkin.svg` |
+| `POST /api/sessions/{id}/check-out` (multipart, field `photo`, không bắt buộc) | ảnh check-out | `/uploads/defaults/default-checkout.svg` |
+
+Giới hạn: tối đa 5MB/ảnh, chỉ nhận `.jpg .jpeg .png .webp` (xem `ParkingPro.API/Common/UploadValidation.cs`).
+
+⚠️ `LocalFileStorageService` lưu file trên đĩa cục bộ — phù hợp 1 server. Nếu deploy nhiều instance
+hoặc lên cloud (Azure/AWS), chỉ cần viết implementation khác của `IFileStorageService` (Blob Storage,
+S3...) và đổi 1 dòng đăng ký DI trong `Infrastructure/DependencyInjection.cs`, không phải sửa gì ở
+Controller/Service khác.
+
 ## Lưu ý quan trọng trước khi build
 
 1. **Package `BCrypt.Net-Next`** đã khai báo trong `ParkingPro.Infrastructure.csproj` — cần `dotnet restore` để tải về.
@@ -113,12 +134,12 @@ RecurringJob.AddOrUpdate<IMonthlyContractMaintenanceService>(
 - API: Controllers cho Auth/Sessions/Slots/MonthlyContracts/Reports, ExceptionHandlingMiddleware, CORS, Swagger có nút Authorize
 - Data Seeder tự động chạy ở Development: tài khoản Admin/Manager/Staff mẫu, 1 bãi xe, 2 khu, 40 slot, bảng giá đủ 3 hình thức
 - Hangfire: 2 recurring job (nhắc gia hạn vé tháng sắp hết hạn, tự chuyển hợp đồng quá hạn sang HetHan + giải phóng slot), Dashboard bảo vệ bằng Basic Auth ngoài Development
+- Upload ảnh (avatar, ảnh xe, ảnh check-in/out) qua `IFileStorageService`/`LocalFileStorageService`, tất cả không bắt buộc và có ảnh mặc định
 - 1 Unit test mẫu cho PricingService (tính phí theo giờ)
 
 ## Chưa làm trong bản scaffold này (gợi ý bước tiếp theo)
 
 - Tích hợp cổng thanh toán thực tế (hiện `PaymentMethod`/`PaymentStatus` mới ở mức model)
-- Upload ảnh check-in/check-out (hiện chỉ lưu URL, chưa có endpoint upload)
 - Gửi thông báo qua kênh thực tế (SMS/push/email) — hiện `Notification` chỉ lưu vào DB, chưa có tích hợp Twilio/Firebase như dự án Sổ Tiết Kiệm trước đây
 
 **Về báo cáo doanh thu (`GET /api/reports/revenue`):** doanh thu vé tháng (`MonthlyRevenue`) được

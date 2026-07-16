@@ -8,4 +8,6 @@ public record ParkingSessionDto(
     string Status,
     DateTime CheckInAtUtc,
     DateTime? CheckOutAtUtc,
-    decimal? TotalAmount);
+    decimal? TotalAmount,
+    string? CheckInImageUrl,
+    string? CheckOutImageUrl);

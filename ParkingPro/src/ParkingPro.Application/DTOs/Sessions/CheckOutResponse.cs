@@ -6,4 +6,5 @@ public record CheckOutResponse(
     DateTime CheckInAtUtc,
     DateTime CheckOutAtUtc,
     decimal TotalAmount,
-    string SlotCode);
+    string SlotCode,
+    string CheckOutImageUrl);

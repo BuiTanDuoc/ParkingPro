@@ -6,6 +6,7 @@ using ParkingPro.Application.Interfaces.Repositories;
 using ParkingPro.Application.Interfaces.Services;
 using ParkingPro.Domain.Entities;
 using ParkingPro.Domain.Enums;
+using ParkingPro.Shared.Constants;
 
 namespace ParkingPro.Application.Services;
 
@@ -18,15 +19,20 @@ public class ParkingSessionService : IParkingSessionService
     private readonly IUnitOfWork _uow;
     private readonly IPricingService _pricingService;
     private readonly IParkingNotifier _notifier;
+    private readonly IFileStorageService _fileStorage;
 
-    public ParkingSessionService(IUnitOfWork uow, IPricingService pricingService, IParkingNotifier notifier)
+    public ParkingSessionService(
+        IUnitOfWork uow, IPricingService pricingService, IParkingNotifier notifier, IFileStorageService fileStorage)
     {
         _uow = uow;
         _pricingService = pricingService;
         _notifier = notifier;
+        _fileStorage = fileStorage;
     }
 
-    public async Task<CheckInResponse> CheckInAsync(CheckInRequest request, Guid staffUserId, CancellationToken ct = default)
+    public async Task<CheckInResponse> CheckInAsync(
+        CheckInRequest request, Guid staffUserId,
+        Stream? photoStream, string? photoFileName, CancellationToken ct = default)
     {
         if (request.SessionType == SessionType.TheoThang)
             throw new BadRequestException("Xe vé tháng phải check-in qua hợp đồng vé tháng, không dùng API này.");
@@ -71,7 +77,14 @@ public class ParkingSessionService : IParkingSessionService
                 throw new ConflictException("Bãi xe đã hết chỗ trống.");
         }
 
-        // 4. Tạo phiên gửi xe + cập nhật trạng thái slot
+        // 4. Ảnh check-in: upload nếu nhân viên có chụp, không thì dùng ảnh mặc định (không bắt buộc)
+        string checkInImageUrl;
+        if (photoStream is not null && !string.IsNullOrWhiteSpace(photoFileName))
+            checkInImageUrl = await _fileStorage.SaveAsync(photoStream, photoFileName, "sessions/checkin", ct);
+        else
+            checkInImageUrl = AppConstants.DefaultPhotos.DefaultCheckInPhotoUrl;
+
+        // 5. Tạo phiên gửi xe + cập nhật trạng thái slot
         var session = new ParkingSession
         {
             ParkingLotId = request.ParkingLotId,
@@ -82,7 +95,7 @@ public class ParkingSessionService : IParkingSessionService
             SessionType = request.SessionType,
             Status = SessionStatus.DangGuiXe,
             CheckInAtUtc = DateTime.UtcNow,
-            CheckInImageUrl = request.CheckInImageUrl,
+            CheckInImageUrl = checkInImageUrl,
             CheckInStaffId = staffUserId
         };
 
@@ -98,10 +111,13 @@ public class ParkingSessionService : IParkingSessionService
         await _notifier.NotifySlotStatusChangedAsync(request.ParkingLotId, slot.Id, slot.Status.ToString(), ct);
         await _notifier.NotifySessionCheckedInAsync(request.ParkingLotId, session.Id, ct);
 
-        return new CheckInResponse(session.Id, vehicle.LicensePlate, slot.Code, session.CheckInAtUtc, session.SessionType.ToString());
+        return new CheckInResponse(
+            session.Id, vehicle.LicensePlate, slot.Code, session.CheckInAtUtc, session.SessionType.ToString(), checkInImageUrl);
     }
 
-    public async Task<CheckOutResponse> CheckOutAsync(Guid sessionId, Guid staffUserId, CancellationToken ct = default)
+    public async Task<CheckOutResponse> CheckOutAsync(
+        Guid sessionId, Guid staffUserId,
+        Stream? photoStream, string? photoFileName, CancellationToken ct = default)
     {
         var session = await _uow.ParkingSessions.GetByIdAsync(sessionId, ct)
             ?? throw new NotFoundException(nameof(ParkingSession), sessionId);
@@ -119,6 +135,11 @@ public class ParkingSessionService : IParkingSessionService
         session.TotalAmount = await _pricingService.CalculateSessionFeeAsync(session, ct);
         session.Status = SessionStatus.DaThanhToan;
         session.CheckOutStaffId = staffUserId;
+
+        // Ảnh check-out: upload nếu nhân viên có chụp, không thì dùng ảnh mặc định (không bắt buộc)
+        session.CheckOutImageUrl = photoStream is not null && !string.IsNullOrWhiteSpace(photoFileName)
+            ? await _fileStorage.SaveAsync(photoStream, photoFileName, "sessions/checkout", ct)
+            : AppConstants.DefaultPhotos.DefaultCheckOutPhotoUrl;
 
         slot.Status = SlotStatus.Trong;
 
@@ -145,7 +166,7 @@ public class ParkingSessionService : IParkingSessionService
 
         return new CheckOutResponse(
             session.Id, vehicle.LicensePlate, session.CheckInAtUtc,
-            session.CheckOutAtUtc.Value, session.TotalAmount.Value, slot.Code);
+            session.CheckOutAtUtc.Value, session.TotalAmount.Value, slot.Code, session.CheckOutImageUrl!);
     }
 
     public async Task<ParkingSessionDto> GetByIdAsync(Guid sessionId, CancellationToken ct = default)
@@ -194,5 +215,7 @@ public class ParkingSessionService : IParkingSessionService
             session.Status.ToString(),
             session.CheckInAtUtc,
             session.CheckOutAtUtc,
-            session.TotalAmount);
+            session.TotalAmount,
+            session.CheckInImageUrl,
+            session.CheckOutImageUrl);
 }

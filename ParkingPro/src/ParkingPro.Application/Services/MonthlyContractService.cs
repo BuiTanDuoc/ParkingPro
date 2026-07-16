@@ -1,10 +1,12 @@
 using ParkingPro.Application.Common;
 using ParkingPro.Application.Common.Exceptions;
 using ParkingPro.Application.DTOs.MonthlyContracts;
+using ParkingPro.Application.Interfaces;
 using ParkingPro.Application.Interfaces.Repositories;
 using ParkingPro.Application.Interfaces.Services;
 using ParkingPro.Domain.Entities;
 using ParkingPro.Domain.Enums;
+using ParkingPro.Shared.Constants;
 
 namespace ParkingPro.Application.Services;
 
@@ -12,14 +14,18 @@ public class MonthlyContractService : IMonthlyContractService
 {
     private readonly IUnitOfWork _uow;
     private readonly IPricingService _pricingService;
+    private readonly IFileStorageService _fileStorage;
 
-    public MonthlyContractService(IUnitOfWork uow, IPricingService pricingService)
+    public MonthlyContractService(IUnitOfWork uow, IPricingService pricingService, IFileStorageService fileStorage)
     {
         _uow = uow;
         _pricingService = pricingService;
+        _fileStorage = fileStorage;
     }
 
-    public async Task<MonthlyContractDto> CreateAsync(CreateMonthlyContractRequest request, Guid staffUserId, CancellationToken ct = default)
+    public async Task<MonthlyContractDto> CreateAsync(
+        CreateMonthlyContractRequest request, Guid staffUserId,
+        Stream? vehiclePhotoStream, string? vehiclePhotoFileName, CancellationToken ct = default)
     {
         if (request.NumberOfMonths <= 0)
             throw new BadRequestException("Số tháng đăng ký phải lớn hơn 0.");
@@ -28,6 +34,7 @@ public class MonthlyContractService : IMonthlyContractService
             ?? throw new NotFoundException(nameof(User), request.CustomerUserId);
 
         var vehicle = await _uow.Vehicles.FirstOrDefaultAsync(v => v.LicensePlate == request.LicensePlate, ct);
+        var isNewVehicle = vehicle is null;
         if (vehicle is null)
         {
             vehicle = new Vehicle
@@ -37,6 +44,19 @@ public class MonthlyContractService : IMonthlyContractService
                 OwnerUserId = customer.Id
             };
             await _uow.Vehicles.AddAsync(vehicle, ct);
+        }
+
+        // Ảnh xe: ưu tiên ảnh vừa upload (nếu có); nếu xe chưa từng có ảnh thì dùng ảnh mặc định.
+        // Không upload lại nếu xe cũ đã có ảnh từ trước và lần này không gửi ảnh mới.
+        if (vehiclePhotoStream is not null && !string.IsNullOrWhiteSpace(vehiclePhotoFileName))
+        {
+            vehicle.PhotoUrl = await _fileStorage.SaveAsync(vehiclePhotoStream, vehiclePhotoFileName, "vehicles", ct);
+            if (!isNewVehicle) _uow.Vehicles.Update(vehicle);
+        }
+        else if (string.IsNullOrEmpty(vehicle.PhotoUrl))
+        {
+            vehicle.PhotoUrl = AppConstants.DefaultPhotos.DefaultVehiclePhotoUrl;
+            if (!isNewVehicle) _uow.Vehicles.Update(vehicle);
         }
 
         ParkingSlot? fixedSlot = null;
@@ -182,6 +202,7 @@ public class MonthlyContractService : IMonthlyContractService
     private static MonthlyContractDto MapToDto(MonthlyContract c) => new(
         c.Id,
         c.Vehicle?.LicensePlate ?? "N/A",
+        c.Vehicle?.PhotoUrl,
         c.CustomerUser?.FullName ?? "N/A",
         c.FixedSlot?.Code,
         c.StartDate,

@@ -12,6 +12,7 @@ using ParkingPro.Application.Interfaces.Services;
 using ParkingPro.Application.Services;
 using ParkingPro.Domain.Common;
 using ParkingPro.Infrastructure.Authorization;
+using ParkingPro.Infrastructure.FileStorage;
 using ParkingPro.Infrastructure.Hubs;
 using ParkingPro.Infrastructure.Persistence;
 using ParkingPro.Infrastructure.Repositories;
@@ -38,6 +39,10 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IReportService, ReportService>();
         services.AddScoped<IMonthlyContractMaintenanceService, MonthlyContractMaintenanceService>();
+        services.AddScoped<IUserService, UserService>();
+
+        // --- Lưu file (avatar, ảnh xe, ảnh check-in/out) ---
+        services.AddScoped<IFileStorageService, LocalFileStorageService>();
 
         // --- Hangfire (background job: nhắc gia hạn vé tháng, tự hết hạn hợp đồng quá hạn) ---
         services.AddHangfire(config => config
