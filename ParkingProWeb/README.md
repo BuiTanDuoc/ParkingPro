@@ -6,7 +6,7 @@ Frontend quản trị cho hệ thống bãi giữ xe ô tô — dựa trên temp
 ## Đã thay đổi so với template gốc
 
 - **Đã xóa** toàn bộ các trang/route demo (Dashboards, Widgets, Cards, Layouts, Interface, Forms, Graphs, Tables, Apps, Icons...) để giảm nhiễu — chỉ giữ lại phần khung layout dùng chung (Sidebar, Navbar, Theme, các component UI lõi trong `app/components`).
-- **Trang mới** (`app/routes/`): `Dashboard`, `ParkingMap` (sơ đồ bãi xe realtime), `Sessions` (check-in/check-out theo giờ/ngày), `MonthlyContracts` (vé tháng), `Reports` (doanh thu), `Profile` (avatar).
+- **Trang mới** (`app/routes/`): `Dashboard`, `ParkingMap` (sơ đồ bãi xe realtime), `Sessions` (check-in/check-out theo giờ/ngày), `MonthlyContracts` (vé tháng), `Reports` (doanh thu), `Profile` (avatar), `SlotsManagement` (tạo khu vực/slot, sửa, bật/tắt bảo trì — Admin/Manager), `Users` (danh sách tài khoản, tạo Staff/Manager/Admin, khóa/mở khóa — Admin).
 - **Đăng nhập thật**: `app/routes/Pages/Login` gọi `/api/auth/login`, lưu JWT + refresh token vào `localStorage`.
 - **`app/api/`**: lớp gọi API dùng chung (`http.js` — tự đính JWT, tự refresh khi hết hạn 401) + service theo domain (`auth`, `users`, `slots`, `sessions`, `contracts`, `reports`, `signalr`).
 - **`app/auth/`**: `AuthContext` (trạng thái đăng nhập toàn app) + `PrivateRoute` (chặn route theo role).
@@ -16,20 +16,30 @@ Frontend quản trị cho hệ thống bãi giữ xe ô tô — dựa trên temp
 
 ```bash
 npm install
-
-# Cấu hình biến môi trường (đọc lúc build bởi webpack, xem build/webpack.config.client.*.js)
-cp .env.example .env
-# rồi export các biến trước khi chạy, ví dụ trên Linux/Mac:
-export $(cat .env | xargs)
-
 npm start   # chạy dev server tại http://localhost:4100 (mặc định webpack-dev-server)
 ```
+
+Biến môi trường đọc từ file `.env` ở thư mục gốc (tự động nạp qua package `dotenv` trong
+`build/webpack.config.client.*.js` — không cần `export` thủ công, chạy được cả trên Windows/Mac/Linux).
+File `.env` mẫu đã có sẵn giá trị thực tế để test:
+
+```
+API_BASE_URL=https://localhost:7080
+DEFAULT_PARKING_LOT_ID=7D3B31FC-1F7D-4CFA-8B6C-C526CDD0637A
+BASE_PATH=/
+```
+
+⚠️ `API_BASE_URL` dùng `https://localhost:7080` (cổng HTTPS mặc định của backend khi `dotnet run`).
+Nếu trình duyệt báo lỗi kết nối/chứng chỉ không tin cậy, chạy `dotnet dev-certs https --trust` một lần
+trên máy backend để tin cậy chứng chỉ HTTPS dev của .NET, rồi tải lại trang.
+
+⚠️ File `.env` đã được thêm vào `.gitignore` — sửa giá trị trong đó tùy máy, không cần sửa `.env.example`.
 
 Biến môi trường cần thiết:
 
 | Biến | Ý nghĩa | Mặc định |
 |---|---|---|
-| `API_BASE_URL` | Địa chỉ backend `ParkingPro.API` | `https://localhost:7080` |
+| `API_BASE_URL` | Địa chỉ backend `ParkingPro.API` | `http://localhost:5080` |
 | `DEFAULT_PARKING_LOT_ID` | GUID của bãi xe (xem giới hạn bên dưới) | rỗng |
 | `BASE_PATH` | Base path khi deploy dưới subpath | `/` |
 
@@ -60,6 +70,8 @@ app/
     ├── MonthlyContracts/
     ├── Reports/
     ├── Profile/
+    ├── SlotsManagement/   # Admin/Manager
+    ├── Users/             # Admin
     └── Pages/Login, Pages/Error404   # còn giữ từ template gốc
 ```
 

@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 var path = require("path");
 var webpack = require("webpack");
 var HtmlWebpackPlugin = require("html-webpack-plugin");
@@ -7,7 +9,7 @@ var ExtractCssChunks = require("extract-css-chunks-webpack-plugin");
 var config = require("./../config");
 
 var BASE_PATH = process.env.BASE_PATH || "/";
-var API_BASE_URL = process.env.API_BASE_URL || "https://localhost:7080";
+var API_BASE_URL = process.env.API_BASE_URL || "http://localhost:5080";
 var DEFAULT_PARKING_LOT_ID = process.env.DEFAULT_PARKING_LOT_ID || "";
 
 module.exports = {

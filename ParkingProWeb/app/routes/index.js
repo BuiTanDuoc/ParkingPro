@@ -14,6 +14,8 @@ import Sessions from './Sessions';
 import MonthlyContracts from './MonthlyContracts';
 import Reports from './Reports';
 import Profile from './Profile';
+import Users from './Users';
+import SlotsManagement from './SlotsManagement';
 
 import Login from './Pages/Login';
 import Error404 from './Pages/Error404';
@@ -33,6 +35,8 @@ export const RoutedContent = () => {
             <PrivateRoute path="/sessions" exact component={Sessions} roles={['Admin', 'Manager', 'Staff']} />
             <PrivateRoute path="/monthly-contracts" exact component={MonthlyContracts} roles={['Admin', 'Manager', 'Staff']} />
             <PrivateRoute path="/reports" exact component={Reports} roles={['Admin', 'Manager']} />
+            <PrivateRoute path="/slots-management" exact component={SlotsManagement} roles={['Admin', 'Manager']} />
+            <PrivateRoute path="/users" exact component={Users} roles={['Admin']} />
             <PrivateRoute path="/profile" exact component={Profile} />
 
             <Route path="/pages/error-404" exact component={Error404} />

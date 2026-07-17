@@ -6,7 +6,7 @@ const REFRESH_TOKEN_KEY = 'parkingpro_refresh_token';
 
 export const getApiBaseUrl = () =>
     (typeof process !== 'undefined' && process.env && process.env.API_BASE_URL) ||
-    'https://localhost:7080';
+    'http://localhost:5080';
 
 export const tokenStorage = {
     getAccessToken: () => localStorage.getItem(ACCESS_TOKEN_KEY),
