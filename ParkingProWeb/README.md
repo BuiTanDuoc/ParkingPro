@@ -75,6 +75,13 @@ app/
     └── Pages/Login, Pages/Error404   # còn giữ từ template gốc
 ```
 
+## Giao diện: chọn Nav Color / Nav Style (Configurator)
+
+Nút bấm hình cây cọ ở góc trái màn hình (từ template gốc, component `ThemeSelector`) cho phép đổi màu
+và kiểu Sidebar/Navbar. Lựa chọn được lưu vào `localStorage` (key `parkingpro_theme`, xem
+`app/components/Theme/ThemeProvider.js`) nên **tải lại trang hoặc đóng mở lại trình duyệt vẫn giữ
+nguyên lựa chọn** — trước đây chỉ lưu trong state React nên bị mất khi tải lại.
+
 ## Realtime (SignalR)
 
 `ParkingMap` tự kết nối tới `/hubs/parking` (qua `app/api/signalr.js`), join group theo `DEFAULT_PARKING_LOT_ID`,

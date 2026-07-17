@@ -52,7 +52,7 @@ class AppLayout extends React.Component {
                         { children }
                     </Layout.Content>
 
-                    { /* -- Theme Selector (DEMO) ----*/ }
+                    { /* -- Theme Selector (đã lưu vào localStorage, xem ThemeProvider.js) --*/ }
                     <PageConfigConsumer>
                     {
                         ({ sidebarHidden, navbarHidden }) => (
