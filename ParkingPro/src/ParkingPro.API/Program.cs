@@ -44,10 +44,14 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AdminWebCors", policy =>
     {
-        policy.AllowAnyOrigin()
+        // ⚠️ TẠM THỜI cho phép MỌI origin để dễ test — dùng SetIsOriginAllowed thay vì
+        // AllowAnyOrigin() vì AllowAnyOrigin() không thể kết hợp với AllowCredentials()
+        // (mà AllowCredentials() vẫn cần thiết cho SignalR gửi kèm token qua query string).
+        // PHẢI đổi lại thành whitelist domain cụ thể (Cors:AllowedOrigins) trước khi lên production.
+        policy.SetIsOriginAllowed(_ => true)
               .AllowAnyHeader()
-              .AllowAnyMethod();
-              //.AllowCredentials(); // cần thiết để SignalR gửi kèm cookie/token
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 

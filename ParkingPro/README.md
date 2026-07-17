@@ -131,11 +131,17 @@ Controller/Service khác.
 - Domain: đầy đủ Entities + Enums (ParkingLot, Zone, ParkingSlot, Vehicle, PricingPlan, ParkingSession, MonthlyContract, Payment, User, RefreshToken, Shift, Notification)
 - Application: Service Layer đầy đủ cho check-in/check-out theo giờ & ngày, tính phí (bậc giá giờ đầu/giờ sau + phụ phí qua đêm), quản lý hợp đồng vé tháng (tạo/gia hạn/hủy), Auth (login, refresh token với family-based reuse detection, đăng ký khách hàng)
 - Infrastructure: EF Core DbContext (soft-delete filter, audit tự động), Generic Repository + UnitOfWork (hỗ trợ transaction), SignalR Hub + Notifier, JWT + BCrypt, RBAC (RequireRoleAttribute/RolePolicyProvider/RoleAuthorizationHandler)
-- API: Controllers cho Auth/Sessions/Slots/MonthlyContracts/Reports, ExceptionHandlingMiddleware, CORS, Swagger có nút Authorize
+- API: Controllers cho Auth/Sessions/Slots/MonthlyContracts/Reports/Users, ExceptionHandlingMiddleware, CORS, Swagger có nút Authorize
+- Quản lý người dùng (Admin): `GET /api/users` (danh sách, lọc theo role), `POST /api/users` (tạo tài khoản Staff/Manager/Admin), `PUT /api/users/{id}/active` (khóa/mở khóa)
+- Quản lý khu vực & slot (Admin/Manager): `GET/POST /api/slots/zones`, `POST /api/slots` (tạo slot), `PUT /api/slots/{id}` (sửa mã/loại — chặn khi slot đang có xe)
 - Data Seeder tự động chạy ở Development: tài khoản Admin/Manager/Staff mẫu, 1 bãi xe, 2 khu, 40 slot, bảng giá đủ 3 hình thức
 - Hangfire: 2 recurring job (nhắc gia hạn vé tháng sắp hết hạn, tự chuyển hợp đồng quá hạn sang HetHan + giải phóng slot), Dashboard bảo vệ bằng Basic Auth ngoài Development
 - Upload ảnh (avatar, ảnh xe, ảnh check-in/out) qua `IFileStorageService`/`LocalFileStorageService`, tất cả không bắt buộc và có ảnh mặc định
 - 1 Unit test mẫu cho PricingService (tính phí theo giờ)
+
+**Bug đã sửa:** `SlotService.SetMaintenanceAsync` trước đó gọi `slot.Zone.ParkingLotId` nhưng `Zone` chưa
+từng được load kèm (repository không `Include`) → luôn `NullReferenceException` khi bật/tắt bảo trì.
+Đã sửa bằng cách lấy `Zone` riêng qua `_uow.Zones.GetByIdAsync(...)`.
 
 ## Chưa làm trong bản scaffold này (gợi ý bước tiếp theo)
 

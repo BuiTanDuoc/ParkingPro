@@ -6,4 +6,5 @@ public record UserProfileDto(
     string Email,
     string? PhoneNumber,
     string Role,
-    string AvatarUrl);
+    string AvatarUrl,
+    bool IsActive);

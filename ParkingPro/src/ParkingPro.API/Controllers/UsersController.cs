@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ParkingPro.API.Common;
 using ParkingPro.API.Requests;
+using ParkingPro.Application.DTOs.Users;
 using ParkingPro.Application.Interfaces.Services;
+using ParkingPro.Infrastructure.Authorization;
 
 namespace ParkingPro.API.Controllers;
 
@@ -39,5 +41,33 @@ public class UsersController : ControllerBase
             _currentUser.UserId!.Value, form.Avatar.OpenReadStream(), form.Avatar.FileName, ct);
 
         return Ok(new { avatarUrl });
+    }
+
+    /// <summary>Danh sách tài khoản (quản lý nhân sự) — lọc theo role nếu có truyền.</summary>
+    [HttpGet]
+    [RequireRole("Admin")]
+    public async Task<IActionResult> GetAll(
+        [FromQuery] string? role, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+    {
+        var result = await _userService.GetAllUsersAsync(role, pageNumber, pageSize, ct);
+        return Ok(result);
+    }
+
+    /// <summary>Tạo tài khoản nội bộ (Staff/Manager/Admin). Chỉ Admin được gọi.</summary>
+    [HttpPost]
+    [RequireRole("Admin")]
+    public async Task<IActionResult> Create(CreateStaffUserRequest request, CancellationToken ct)
+    {
+        var result = await _userService.CreateStaffUserAsync(request, ct);
+        return CreatedAtAction(nameof(GetAll), new { id = result.Id }, result);
+    }
+
+    /// <summary>Khóa/mở khóa tài khoản.</summary>
+    [HttpPut("{id:guid}/active")]
+    [RequireRole("Admin")]
+    public async Task<IActionResult> SetActive(Guid id, [FromQuery] bool isActive, CancellationToken ct)
+    {
+        await _userService.SetActiveStatusAsync(id, isActive, ct);
+        return NoContent();
     }
 }
