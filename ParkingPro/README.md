@@ -139,9 +139,15 @@ Controller/Service khác.
 - Upload ảnh (avatar, ảnh xe, ảnh check-in/out) qua `IFileStorageService`/`LocalFileStorageService`, tất cả không bắt buộc và có ảnh mặc định
 - 1 Unit test mẫu cho PricingService (tính phí theo giờ)
 
-**Bug đã sửa:** `SlotService.SetMaintenanceAsync` trước đó gọi `slot.Zone.ParkingLotId` nhưng `Zone` chưa
-từng được load kèm (repository không `Include`) → luôn `NullReferenceException` khi bật/tắt bảo trì.
-Đã sửa bằng cách lấy `Zone` riêng qua `_uow.Zones.GetByIdAsync(...)`.
+**Bug đã sửa (navigation property null vì `IRepository.Query()`/`GetByIdAsync` không `Include`):**
+- `SlotService.SetMaintenanceAsync`: gọi `slot.Zone.ParkingLotId` nhưng `Zone` chưa từng được load kèm → `NullReferenceException` khi bật/tắt bảo trì. Đã sửa bằng cách lấy `Zone` riêng qua `_uow.Zones.GetByIdAsync(...)`.
+- `SlotService.GetSlotStatusesAsync`: tương tự, gọi `slot.Zone.Name` sau khi `.ToList()` → `NullReferenceException` khi gọi `GET /api/slots/status`. Đã sửa bằng cách lấy trước danh sách `Zone` của bãi xe, dựng `Dictionary<Guid, Zone>`, rồi tự "join" bằng tay thay vì dựa vào navigation property.
+
+⚠️ Đây là lỗi mang tính hệ thống của cách tiếp cận `IRepository<T>` hiện tại (không hỗ trợ `Include`) — nếu
+bạn viết thêm Service mới, **tuyệt đối tránh** truy cập navigation property (`entity.NavProp.X`) trên kết quả
+trả về từ `GetByIdAsync`/`FirstOrDefaultAsync`/`Query().ToList()` trừ khi chỉ dùng trong mệnh đề `Where(...)`
+để lọc (EF dịch sang SQL JOIN, an toàn, không cần Include) — còn muốn *đọc* dữ liệu của navigation sau khi
+đã có kết quả thì phải tự fetch riêng (như 2 chỗ trên) hoặc mở rộng `IRepository<T>` để hỗ trợ `Include`.
 
 ## Chưa làm trong bản scaffold này (gợi ý bước tiếp theo)
 

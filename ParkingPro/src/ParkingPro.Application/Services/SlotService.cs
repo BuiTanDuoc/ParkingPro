@@ -21,9 +21,19 @@ public class SlotService : ISlotService
 
     public async Task<IReadOnlyList<SlotStatusDto>> GetSlotStatusesAsync(Guid parkingLotId, CancellationToken ct = default)
     {
+        // Không dùng "s.Zone.Name"/"s.Zone.ParkingLotId" trực tiếp: IRepository.Query() không Include
+        // navigation, nên "slot.Zone" luôn null sau khi ToList() — phải tự lấy Zone rồi join bằng tay.
+        var zones = _uow.Zones.Query()
+            .Where(z => z.ParkingLotId == parkingLotId)
+            .ToList()
+            .ToDictionary(z => z.Id);
+        var zoneIds = zones.Keys.ToList();
+
         var slots = _uow.ParkingSlots.Query()
-            .Where(s => s.Zone.ParkingLotId == parkingLotId)
-            .OrderBy(s => s.Zone.Floor).ThenBy(s => s.Code)
+            .Where(s => zoneIds.Contains(s.ZoneId))
+            .ToList()
+            .OrderBy(s => zones[s.ZoneId].Floor)
+            .ThenBy(s => s.Code)
             .ToList();
 
         var result = new List<SlotStatusDto>();
@@ -41,7 +51,7 @@ public class SlotService : ISlotService
                 }
             }
 
-            result.Add(new SlotStatusDto(slot.Id, slot.Code, slot.Zone.Name, slot.Status.ToString(), slot.Type.ToString(), plate));
+            result.Add(new SlotStatusDto(slot.Id, slot.Code, zones[slot.ZoneId].Name, slot.Status.ToString(), slot.Type.ToString(), plate));
         }
 
         return result;
@@ -55,8 +65,7 @@ public class SlotService : ISlotService
         if (slot.Status == SlotStatus.DangDauXe)
             throw new ConflictException("Không thể chuyển sang bảo trì khi slot đang có xe.");
 
-        // Query() (dùng ở GetSlotStatusesAsync) load kèm Zone qua Include ngầm của EF khi filter theo
-        // s.Zone.ParkingLotId, nhưng GetByIdAsync ở trên KHÔNG kèm Zone — phải lấy riêng để tránh NullReferenceException.
+        // GetByIdAsync không Include Zone (IRepository không hỗ trợ Include) — phải lấy Zone riêng để tránh NullReferenceException.
         var zone = await _uow.Zones.GetByIdAsync(slot.ZoneId, ct)
             ?? throw new NotFoundException(nameof(Zone), slot.ZoneId);
 
