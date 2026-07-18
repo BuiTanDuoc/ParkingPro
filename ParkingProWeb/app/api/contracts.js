@@ -22,3 +22,13 @@ export const renewContract = (id, additionalMonths) =>
 
 export const cancelContract = (id) =>
     apiFetch(`/api/monthly-contracts/${id}/cancel`, { method: 'POST' });
+
+/** Trả về hợp đồng đang hoạt động gắn với 1 slot cố định, hoặc null nếu không có (404). */
+export const getContractBySlot = async (slotId) => {
+    try {
+        return await apiFetch(`/api/monthly-contracts/by-slot/${slotId}`);
+    } catch (err) {
+        if (err.status === 404) return null;
+        throw err;
+    }
+};

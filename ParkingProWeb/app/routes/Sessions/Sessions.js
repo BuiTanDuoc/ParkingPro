@@ -1,127 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import {
-    Container, Row, Col, Card, CardBody, Table, Badge, Button,
-    Modal, ModalHeader, ModalBody, ModalFooter, Form, FormGroup, Label, Input, CustomInput, Alert
-} from './../../components';
+import { Container, Row, Col, Card, CardBody, Table, Badge, Button, Alert } from './../../components';
 
 import { HeaderMain } from '../components/HeaderMain';
-import { getActiveSessions, checkIn, checkOut } from './../../api/sessions';
+import CheckInModal from '../components/ParkingPro/CheckInModal';
+import CheckOutModal from '../components/ParkingPro/CheckOutModal';
+import { getActiveSessions } from './../../api/sessions';
 import { DEFAULT_PARKING_LOT_ID } from './../../config/parkingLot';
 
 const statusColor = { DangGuiXe: 'warning', DaThanhToan: 'success', DaHuy: 'secondary' };
-
-const CheckInModal = ({ isOpen, toggle, onSuccess }) => {
-    const [licensePlate, setLicensePlate] = useState('');
-    const [vehicleType, setVehicleType] = useState('OToDuoi7Cho');
-    const [sessionType, setSessionType] = useState('TheoGio');
-    const [photoFile, setPhotoFile] = useState(null);
-    const [error, setError] = useState(null);
-    const [submitting, setSubmitting] = useState(false);
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError(null);
-        setSubmitting(true);
-        try {
-            await checkIn({
-                parkingLotId: DEFAULT_PARKING_LOT_ID,
-                licensePlate,
-                vehicleType,
-                sessionType,
-            }, photoFile);
-            setLicensePlate('');
-            setPhotoFile(null);
-            onSuccess();
-            toggle();
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    return (
-        <Modal isOpen={isOpen} toggle={toggle}>
-            <Form onSubmit={handleSubmit}>
-                <ModalHeader toggle={toggle}>Check-in xe</ModalHeader>
-                <ModalBody>
-                    {error && <Alert color="danger">{error}</Alert>}
-                    <FormGroup>
-                        <Label>Biển số xe</Label>
-                        <Input value={licensePlate} onChange={(e) => setLicensePlate(e.target.value)} required placeholder="51A-12345" />
-                    </FormGroup>
-                    <FormGroup>
-                        <Label>Loại xe</Label>
-                        <CustomInput type="select" value={vehicleType} onChange={(e) => setVehicleType(e.target.value)}>
-                            <option value="OToDuoi7Cho">Ô tô dưới 7 chỗ</option>
-                            <option value="OToTren7Cho">Ô tô trên 7 chỗ</option>
-                            <option value="XeTai">Xe tải</option>
-                        </CustomInput>
-                    </FormGroup>
-                    <FormGroup>
-                        <Label>Hình thức gửi</Label>
-                        <CustomInput type="select" value={sessionType} onChange={(e) => setSessionType(e.target.value)}>
-                            <option value="TheoGio">Theo giờ</option>
-                            <option value="TheoNgay">Theo ngày</option>
-                        </CustomInput>
-                    </FormGroup>
-                    <FormGroup>
-                        <Label>Ảnh check-in (không bắt buộc)</Label>
-                        <Input type="file" accept="image/*" onChange={(e) => setPhotoFile(e.target.files[0] || null)} />
-                    </FormGroup>
-                </ModalBody>
-                <ModalFooter>
-                    <Button color="secondary" onClick={toggle} type="button">Hủy</Button>
-                    <Button color="primary" type="submit" disabled={submitting}>
-                        {submitting ? 'Đang xử lý...' : 'Check-in'}
-                    </Button>
-                </ModalFooter>
-            </Form>
-        </Modal>
-    );
-};
-
-const CheckOutModal = ({ session, toggle, onSuccess }) => {
-    const [photoFile, setPhotoFile] = useState(null);
-    const [error, setError] = useState(null);
-    const [submitting, setSubmitting] = useState(false);
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError(null);
-        setSubmitting(true);
-        try {
-            const result = await checkOut(session.id, photoFile);
-            onSuccess(result);
-            toggle();
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    return (
-        <Modal isOpen={!!session} toggle={toggle}>
-            <Form onSubmit={handleSubmit}>
-                <ModalHeader toggle={toggle}>Check-out xe {session?.licensePlate}</ModalHeader>
-                <ModalBody>
-                    {error && <Alert color="danger">{error}</Alert>}
-                    <FormGroup>
-                        <Label>Ảnh check-out (không bắt buộc)</Label>
-                        <Input type="file" accept="image/*" onChange={(e) => setPhotoFile(e.target.files[0] || null)} />
-                    </FormGroup>
-                </ModalBody>
-                <ModalFooter>
-                    <Button color="secondary" onClick={toggle} type="button">Hủy</Button>
-                    <Button color="primary" type="submit" disabled={submitting}>
-                        {submitting ? 'Đang xử lý...' : 'Xác nhận check-out'}
-                    </Button>
-                </ModalFooter>
-            </Form>
-        </Modal>
-    );
-};
 
 const Sessions = () => {
     const [sessions, setSessions] = useState([]);

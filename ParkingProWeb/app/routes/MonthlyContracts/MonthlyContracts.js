@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import {
-    Container, Row, Col, Card, CardBody, Table, Badge, Button,
-    Modal, ModalHeader, ModalBody, ModalFooter, Form, FormGroup, Label, Input, CustomInput, Alert
-} from './../../components';
+import { Container, Row, Col, Card, CardBody, Table, Badge, Button, Alert } from './../../components';
 
 import { HeaderMain } from '../components/HeaderMain';
-import { getExpiringSoon, createContract, renewContract, cancelContract } from './../../api/contracts';
+import CreateContractModal from '../components/ParkingPro/CreateContractModal';
+import { getExpiringSoon, renewContract, cancelContract } from './../../api/contracts';
 import { getApiBaseUrl } from './../../api/http';
 import { DEFAULT_PARKING_LOT_ID } from './../../config/parkingLot';
 
@@ -13,97 +11,6 @@ const statusColor = { DangHoatDong: 'success', SapHetHan: 'warning', HetHan: 'se
 const statusLabel = { DangHoatDong: 'Đang hoạt động', SapHetHan: 'Sắp hết hạn', HetHan: 'Hết hạn', DaHuy: 'Đã hủy' };
 
 const resolvePhotoUrl = (url) => (url ? (url.startsWith('http') ? url : `${getApiBaseUrl()}${url}`) : null);
-
-const CreateContractModal = ({ isOpen, toggle, onSuccess }) => {
-    const [customerUserId, setCustomerUserId] = useState('');
-    const [licensePlate, setLicensePlate] = useState('');
-    const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
-    const [numberOfMonths, setNumberOfMonths] = useState(1);
-    const [autoRenew, setAutoRenew] = useState(false);
-    const [photoFile, setPhotoFile] = useState(null);
-    const [error, setError] = useState(null);
-    const [submitting, setSubmitting] = useState(false);
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError(null);
-        setSubmitting(true);
-        try {
-            await createContract({
-                parkingLotId: DEFAULT_PARKING_LOT_ID,
-                customerUserId,
-                licensePlate,
-                startDate,
-                numberOfMonths,
-                autoRenew,
-            }, photoFile);
-            setCustomerUserId('');
-            setLicensePlate('');
-            setPhotoFile(null);
-            onSuccess();
-            toggle();
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    return (
-        <Modal isOpen={isOpen} toggle={toggle}>
-            <Form onSubmit={handleSubmit}>
-                <ModalHeader toggle={toggle}>Tạo hợp đồng vé tháng</ModalHeader>
-                <ModalBody>
-                    {error && <Alert color="danger">{error}</Alert>}
-                    <FormGroup>
-                        <Label>Mã khách hàng (User Id)</Label>
-                        <Input
-                            value={customerUserId}
-                            onChange={(e) => setCustomerUserId(e.target.value)}
-                            placeholder="GUID của khách hàng đã đăng ký tài khoản"
-                            required
-                        />
-                        <small className="text-muted">
-                            Cần khách hàng đã có tài khoản (đăng ký qua /api/auth/register-customer).
-                            Bản scaffold hiện chưa có UI tìm kiếm khách hàng.
-                        </small>
-                    </FormGroup>
-                    <FormGroup>
-                        <Label>Biển số xe</Label>
-                        <Input value={licensePlate} onChange={(e) => setLicensePlate(e.target.value)} required placeholder="51A-12345" />
-                    </FormGroup>
-                    <FormGroup>
-                        <Label>Ngày bắt đầu</Label>
-                        <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
-                    </FormGroup>
-                    <FormGroup>
-                        <Label>Số tháng đăng ký</Label>
-                        <Input type="number" min={1} value={numberOfMonths} onChange={(e) => setNumberOfMonths(Number(e.target.value))} required />
-                    </FormGroup>
-                    <FormGroup>
-                        <CustomInput
-                            type="checkbox"
-                            id="autoRenew"
-                            label="Tự động gia hạn"
-                            checked={autoRenew}
-                            onChange={(e) => setAutoRenew(e.target.checked)}
-                        />
-                    </FormGroup>
-                    <FormGroup>
-                        <Label>Ảnh xe (không bắt buộc)</Label>
-                        <Input type="file" accept="image/*" onChange={(e) => setPhotoFile(e.target.files[0] || null)} />
-                    </FormGroup>
-                </ModalBody>
-                <ModalFooter>
-                    <Button color="secondary" type="button" onClick={toggle}>Hủy</Button>
-                    <Button color="primary" type="submit" disabled={submitting}>
-                        {submitting ? 'Đang xử lý...' : 'Tạo hợp đồng'}
-                    </Button>
-                </ModalFooter>
-            </Form>
-        </Modal>
-    );
-};
 
 const MonthlyContracts = () => {
     const [contracts, setContracts] = useState([]);

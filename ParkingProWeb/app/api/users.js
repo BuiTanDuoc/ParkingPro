@@ -8,6 +8,14 @@ export const updateMyAvatar = (file) => {
     return apiFetch('/api/users/me/avatar', { method: 'POST', isFormData: true, body: formData });
 };
 
+/** @param {object} fields - { fullName, phoneNumber } */
+export const updateMyProfile = (fields) =>
+    apiFetch('/api/users/me', { method: 'PUT', body: fields });
+
+/** @param {object} fields - { currentPassword, newPassword } */
+export const changeMyPassword = (fields) =>
+    apiFetch('/api/users/me/change-password', { method: 'POST', body: fields });
+
 export const getAllUsers = (role, pageNumber = 1, pageSize = 20) => {
     const roleParam = role ? `&role=${role}` : '';
     return apiFetch(`/api/users?pageNumber=${pageNumber}&pageSize=${pageSize}${roleParam}`);

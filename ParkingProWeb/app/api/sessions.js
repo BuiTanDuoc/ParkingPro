@@ -25,3 +25,13 @@ export const checkOut = (sessionId, photoFile) => {
 
     return apiFetch(`/api/sessions/${sessionId}/check-out`, { method: 'POST', isFormData: true, body: formData });
 };
+
+/** Trả về phiên đang gửi tại 1 slot, hoặc null nếu không có (404). */
+export const getActiveSessionBySlot = async (slotId) => {
+    try {
+        return await apiFetch(`/api/sessions/by-slot/${slotId}/active`);
+    } catch (err) {
+        if (err.status === 404) return null;
+        throw err;
+    }
+};

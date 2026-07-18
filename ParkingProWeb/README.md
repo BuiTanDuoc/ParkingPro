@@ -6,7 +6,9 @@ Frontend quản trị cho hệ thống bãi giữ xe ô tô — dựa trên temp
 ## Đã thay đổi so với template gốc
 
 - **Đã xóa** toàn bộ các trang/route demo (Dashboards, Widgets, Cards, Layouts, Interface, Forms, Graphs, Tables, Apps, Icons...) để giảm nhiễu — chỉ giữ lại phần khung layout dùng chung (Sidebar, Navbar, Theme, các component UI lõi trong `app/components`).
-- **Trang mới** (`app/routes/`): `Dashboard`, `ParkingMap` (sơ đồ bãi xe realtime), `Sessions` (check-in/check-out theo giờ/ngày), `MonthlyContracts` (vé tháng), `Reports` (doanh thu), `Profile` (avatar), `SlotsManagement` (tạo khu vực/slot, sửa, bật/tắt bảo trì — Admin/Manager), `Users` (danh sách tài khoản, tạo Staff/Manager/Admin, khóa/mở khóa — Admin).
+- **Trang mới** (`app/routes/`): `Dashboard`, `ParkingMap` (sơ đồ bãi xe realtime — icon/màu theo loại slot, menu thao tác đầy đủ trên từng slot), `Sessions` (check-in/check-out theo giờ/ngày), `MonthlyContracts` (vé tháng), `Reports` (doanh thu), `Profile` (avatar, chỉnh sửa hồ sơ, đổi mật khẩu), `SlotsManagement` (2 tab: Khu vực / Danh sách slot có phân trang+lọc+tìm kiếm — Admin/Manager), `Users` (danh sách tài khoản, tạo Staff/Manager/Admin, khóa/mở khóa — Admin).
+- **`app/routes/components/ParkingPro/`**: các modal dùng chung giữa nhiều trang — `CheckInModal`, `CheckOutModal`, `SlotFormModal`, `ZoneFormModal`, `CreateContractModal`, `ViewContractModal` (mới, xem hợp đồng theo slot).
+
 - **Đăng nhập thật**: `app/routes/Pages/Login` gọi `/api/auth/login`, lưu JWT + refresh token vào `localStorage`.
 - **`app/api/`**: lớp gọi API dùng chung (`http.js` — tự đính JWT, tự refresh khi hết hạn 401) + service theo domain (`auth`, `users`, `slots`, `sessions`, `contracts`, `reports`, `signalr`).
 - **`app/auth/`**: `AuthContext` (trạng thái đăng nhập toàn app) + `PrivateRoute` (chặn route theo role).
@@ -50,9 +52,7 @@ Tài khoản đăng nhập mẫu (từ Data Seeder của backend): `admin@parkin
 
 1. **Chỉ hỗ trợ 1 bãi xe** — `DEFAULT_PARKING_LOT_ID` là hằng số cấu hình cứng qua biến môi trường, lấy từ bảng `ParkingLots` sau khi backend chạy Data Seeder (xem log hoặc query DB để lấy đúng GUID). Muốn hỗ trợ nhiều bãi xe cần thêm 1 bộ chọn bãi xe (dropdown) và lưu lựa chọn vào Context.
 2. **Tạo hợp đồng vé tháng cần nhập tay `CustomerUserId` (GUID)** — chưa có UI tìm kiếm/autocomplete khách hàng theo tên/số điện thoại. Cần khách hàng đã đăng ký tài khoản qua `/api/auth/register-customer` trước.
-3. **`node-sass`** (dependency của template gốc, dùng để build SCSS) là package cũ, cần môi trường có sẵn Python + toolchain build native bình thường sẽ tự cài được qua `npm install`; nếu máy bạn gặp lỗi build `node-sass`, cân nhắc thay bằng `sass` (Dart Sass) trong `package.json` + `build/webpack.config.client.*.js` (đổi `sass-loader` config tương ứng).
-4. **Chưa xử lý hết lỗi 403 Forbidden** (vd Staff cố vào trang Reports) một cách thân thiện — `PrivateRoute` mới chỉ redirect về Dashboard, chưa có trang "Không có quyền truy cập" riêng.
-5. **Chưa có trang quản lý Users/Slots (CRUD)** — mới có API `GET /api/slots/status` (hiển thị) và `PUT /api/slots/{id}/maintenance` (chưa có UI gọi), chưa có trang danh sách nhân viên hay tạo tài khoản Staff/Manager mới từ UI (hiện tạo qua Data Seeder hoặc gọi API trực tiếp).
+3. **Chưa xử lý hết lỗi 403 Forbidden** (vd Staff cố vào trang Reports) một cách thân thiện — `PrivateRoute` mới chỉ redirect về Dashboard, chưa có trang "Không có quyền truy cập" riêng.
 
 ## Cấu trúc thư mục chính
 
