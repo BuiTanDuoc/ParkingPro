@@ -19,10 +19,13 @@ import { DEFAULT_PARKING_LOT_ID } from './../../config/parkingLot';
 const statusColor = { Trong: 'success', DangDauXe: 'danger', DaDatTruoc: 'warning', BaoTri: 'secondary' };
 const statusLabel = { Trong: 'Trống', DangDauXe: 'Đang có xe', DaDatTruoc: 'Đã đặt trước', BaoTri: 'Bảo trì' };
 
-// Icon + màu riêng theo loại slot (khác với statusColor — statusColor tô viền/badge theo trạng thái,
-// còn màu icon này giúp phân biệt loại slot ngay cả khi cùng trạng thái).
+// Icon + màu viền riêng theo loại slot — trạng thái (Trống/Đang có xe/...) vẫn thể hiện qua Badge bên dưới,
+// còn màu viền/nền ở đây giúp phân biệt loại slot (Thường/VIP/Vé tháng) ngay cả khi cùng trạng thái.
+// Dùng inline style cho nền vì Bootstrap 4 mặc định không có class nền màu nhạt (bg-*-light).
 const slotTypeIcon = { Thuong: 'fa-car', Vip: 'fa-star', DanhChoVeThang: 'fa-id-card' };
-const slotTypeColor = { Thuong: 'text-secondary', Vip: 'text-warning', DanhChoVeThang: 'text-info' };
+const slotTypeBorderColor = { Thuong: 'secondary', Vip: 'warning', DanhChoVeThang: 'info' };
+const slotTypeTextColor = { Thuong: 'text-secondary', Vip: 'text-warning', DanhChoVeThang: 'text-info' };
+const slotTypeBgColor = { Thuong: '#f1f2f4', Vip: '#fff6df', DanhChoVeThang: '#e4f3fc' };
 const slotTypeLabel = { Thuong: 'Thường', Vip: 'VIP', DanhChoVeThang: 'Dành vé tháng' };
 
 const SlotBox = ({ slot, zones, onChanged, onOpenEdit, onOpenCheckIn, onOpenCheckOut, onOpenCreateContract, onOpenViewContract }) => {
@@ -41,9 +44,12 @@ const SlotBox = ({ slot, zones, onChanged, onOpenEdit, onOpenCheckIn, onOpenChec
     };
 
     return (
-        <div className={`p-2 text-center rounded border border-${statusColor[slot.status] || 'secondary'}`}>
+        <div
+            className={`p-2 text-center rounded border border-${slotTypeBorderColor[slot.type] || 'secondary'}`}
+            style={{ borderWidth: 2, backgroundColor: slotTypeBgColor[slot.type] || '#f8f9fa' }}
+        >
             <div className="d-flex justify-content-between align-items-start">
-                <i className={`fa ${slotTypeIcon[slot.type] || 'fa-square'} ${slotTypeColor[slot.type] || ''}`} title={slotTypeLabel[slot.type]}></i>
+                <i className={`fa ${slotTypeIcon[slot.type] || 'fa-square'} ${slotTypeTextColor[slot.type] || ''}`} title={slotTypeLabel[slot.type]}></i>
                 <UncontrolledDropdown size="sm">
                     <DropdownToggle tag="span" style={{ cursor: 'pointer' }}>
                         <i className="fa fa-ellipsis-v text-muted"></i>
