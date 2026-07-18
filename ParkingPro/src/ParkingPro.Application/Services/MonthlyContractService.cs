@@ -114,7 +114,8 @@ public class MonthlyContractService : IMonthlyContractService
             await _uow.SaveChangesAsync(ct);
         }, ct);
 
-        return MapToDto(contract);
+        // contract vừa tạo đã có sẵn Vehicle/CustomerUser/FixedSlot gán thủ công ở trên nên map trực tiếp được, không cần fetch lại
+        return await MapToDtoAsync(contract, ct);
     }
 
     public async Task<MonthlyContractDto> RenewAsync(Guid contractId, int additionalMonths, Guid staffUserId, CancellationToken ct = default)
@@ -152,7 +153,7 @@ public class MonthlyContractService : IMonthlyContractService
             await _uow.SaveChangesAsync(ct);
         }, ct);
 
-        return MapToDto(contract);
+        return await MapToDtoAsync(contract, ct);
     }
 
     public async Task CancelAsync(Guid contractId, CancellationToken ct = default)
@@ -190,24 +191,52 @@ public class MonthlyContractService : IMonthlyContractService
         var totalCount = query.Count();
         var pageItems = query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
 
+        var items = new List<MonthlyContractDto>();
+        foreach (var contract in pageItems)
+            items.Add(await MapToDtoAsync(contract, ct));
+
         return new PagedResult<MonthlyContractDto>
         {
-            Items = pageItems.Select(MapToDto).ToList(),
+            Items = items,
             PageNumber = pageNumber,
             PageSize = pageSize,
             TotalCount = totalCount
         };
     }
 
-    private static MonthlyContractDto MapToDto(MonthlyContract c) => new(
-        c.Id,
-        c.Vehicle?.LicensePlate ?? "N/A",
-        c.Vehicle?.PhotoUrl,
-        c.CustomerUser?.FullName ?? "N/A",
-        c.FixedSlot?.Code,
-        c.StartDate,
-        c.EndDate,
-        c.MonthlyFee,
-        c.Status.ToString(),
-        c.AutoRenew);
+    public async Task<MonthlyContractDto> GetActiveContractBySlotAsync(Guid slotId, CancellationToken ct = default)
+    {
+        var contract = await _uow.MonthlyContracts.FirstOrDefaultAsync(
+            c => c.FixedSlotId == slotId && c.Status != ContractStatus.DaHuy, ct)
+            ?? throw new NotFoundException("Hợp đồng vé tháng cho slot", slotId);
+
+        return await MapToDtoAsync(contract, ct);
+    }
+
+    /// <summary>
+    /// Map sang DTO, tự fetch Vehicle/CustomerUser/FixedSlot nếu chưa được load kèm (vì
+    /// IRepository.Query()/GetByIdAsync không hỗ trợ Include — xem ghi chú tương tự ở SlotService).
+    /// Nếu contract được truyền vào đã tự gán sẵn navigation (như lúc CreateAsync) thì không cần fetch lại.
+    /// </summary>
+    private async Task<MonthlyContractDto> MapToDtoAsync(MonthlyContract c, CancellationToken ct)
+    {
+        var vehicle = c.Vehicle ?? await _uow.Vehicles.GetByIdAsync(c.VehicleId, ct);
+        var customer = c.CustomerUser ?? await _uow.Users.GetByIdAsync(c.CustomerUserId, ct);
+
+        ParkingSlot? fixedSlot = c.FixedSlot;
+        if (fixedSlot is null && c.FixedSlotId is not null)
+            fixedSlot = await _uow.ParkingSlots.GetByIdAsync(c.FixedSlotId.Value, ct);
+
+        return new MonthlyContractDto(
+            c.Id,
+            vehicle?.LicensePlate ?? "N/A",
+            vehicle?.PhotoUrl,
+            customer?.FullName ?? "N/A",
+            fixedSlot?.Code,
+            c.StartDate,
+            c.EndDate,
+            c.MonthlyFee,
+            c.Status.ToString(),
+            c.AutoRenew);
+    }
 }

@@ -105,6 +105,38 @@ public class UserService : IUserService
         await _uow.SaveChangesAsync(ct);
     }
 
+    public async Task<UserProfileDto> UpdateProfileAsync(Guid userId, string fullName, string? phoneNumber, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(fullName))
+            throw new BadRequestException("Họ tên không được để trống.");
+
+        var user = await _uow.Users.GetByIdAsync(userId, ct)
+            ?? throw new NotFoundException(nameof(User), userId);
+
+        user.FullName = fullName;
+        user.PhoneNumber = phoneNumber;
+        _uow.Users.Update(user);
+        await _uow.SaveChangesAsync(ct);
+
+        return MapToDto(user);
+    }
+
+    public async Task ChangePasswordAsync(Guid userId, string currentPassword, string newPassword, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 6)
+            throw new BadRequestException("Mật khẩu mới phải có ít nhất 6 ký tự.");
+
+        var user = await _uow.Users.GetByIdAsync(userId, ct)
+            ?? throw new NotFoundException(nameof(User), userId);
+
+        if (!_passwordHasher.Verify(currentPassword, user.PasswordHash))
+            throw new BadRequestException("Mật khẩu hiện tại không đúng.");
+
+        user.PasswordHash = _passwordHasher.Hash(newPassword);
+        _uow.Users.Update(user);
+        await _uow.SaveChangesAsync(ct);
+    }
+
     private static UserProfileDto MapToDto(User u) => new(
         u.Id,
         u.FullName,

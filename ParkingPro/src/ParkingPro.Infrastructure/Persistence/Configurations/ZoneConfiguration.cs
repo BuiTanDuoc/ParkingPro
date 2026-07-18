@@ -9,6 +9,7 @@ public class ZoneConfiguration : IEntityTypeConfiguration<Zone>
     public void Configure(EntityTypeBuilder<Zone> builder)
     {
         builder.Property(x => x.Name).IsRequired().HasMaxLength(100);
+        builder.Property(x => x.Description).HasMaxLength(1000);
 
         builder.HasOne(x => x.ParkingLot)
             .WithMany(x => x.Zones)

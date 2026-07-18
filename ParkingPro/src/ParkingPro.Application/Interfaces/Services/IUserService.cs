@@ -18,4 +18,10 @@ public interface IUserService
 
     /// <summary>Khóa/mở khóa tài khoản.</summary>
     Task SetActiveStatusAsync(Guid userId, bool isActive, CancellationToken ct = default);
+
+    /// <summary>Tự sửa thông tin cá nhân (họ tên, số điện thoại) — không đổi được email/role qua đây.</summary>
+    Task<UserProfileDto> UpdateProfileAsync(Guid userId, string fullName, string? phoneNumber, CancellationToken ct = default);
+
+    /// <summary>Đổi mật khẩu — bắt buộc xác thực đúng mật khẩu hiện tại.</summary>
+    Task ChangePasswordAsync(Guid userId, string currentPassword, string newPassword, CancellationToken ct = default);
 }

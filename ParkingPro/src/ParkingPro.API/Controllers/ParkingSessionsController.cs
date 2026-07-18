@@ -77,4 +77,12 @@ public class ParkingSessionsController : ControllerBase
         var result = await _sessionService.GetActiveSessionsAsync(parkingLotId, pageNumber, pageSize, ct);
         return Ok(result);
     }
+
+    /// <summary>Phiên đang gửi tại 1 slot — dùng cho menu "Check-out" trên sơ đồ bãi xe.</summary>
+    [HttpGet("by-slot/{slotId:guid}/active")]
+    public async Task<IActionResult> GetActiveBySlot(Guid slotId, CancellationToken ct)
+    {
+        var result = await _sessionService.GetActiveSessionBySlotAsync(slotId, ct);
+        return Ok(result);
+    }
 }

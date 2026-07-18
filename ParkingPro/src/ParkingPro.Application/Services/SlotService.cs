@@ -1,3 +1,4 @@
+using ParkingPro.Application.Common;
 using ParkingPro.Application.Common.Exceptions;
 using ParkingPro.Application.DTOs.Slots;
 using ParkingPro.Application.Interfaces;
@@ -21,12 +22,7 @@ public class SlotService : ISlotService
 
     public async Task<IReadOnlyList<SlotStatusDto>> GetSlotStatusesAsync(Guid parkingLotId, CancellationToken ct = default)
     {
-        // Không dùng "s.Zone.Name"/"s.Zone.ParkingLotId" trực tiếp: IRepository.Query() không Include
-        // navigation, nên "slot.Zone" luôn null sau khi ToList() — phải tự lấy Zone rồi join bằng tay.
-        var zones = _uow.Zones.Query()
-            .Where(z => z.ParkingLotId == parkingLotId)
-            .ToList()
-            .ToDictionary(z => z.Id);
+        var zones = GetZoneLookup(parkingLotId);
         var zoneIds = zones.Keys.ToList();
 
         var slots = _uow.ParkingSlots.Query()
@@ -38,23 +34,48 @@ public class SlotService : ISlotService
 
         var result = new List<SlotStatusDto>();
         foreach (var slot in slots)
-        {
-            string? plate = null;
-            if (slot.Status == SlotStatus.DangDauXe)
-            {
-                var activeSession = await _uow.ParkingSessions.FirstOrDefaultAsync(
-                    s => s.SlotId == slot.Id && s.Status == SessionStatus.DangGuiXe, ct);
-                if (activeSession is not null)
-                {
-                    var vehicle = await _uow.Vehicles.GetByIdAsync(activeSession.VehicleId, ct);
-                    plate = vehicle?.LicensePlate;
-                }
-            }
-
-            result.Add(new SlotStatusDto(slot.Id, slot.Code, zones[slot.ZoneId].Name, slot.Status.ToString(), slot.Type.ToString(), plate));
-        }
+            result.Add(await MapToStatusDtoAsync(slot, zones[slot.ZoneId], ct));
 
         return result;
+    }
+
+    public async Task<PagedResult<SlotStatusDto>> GetSlotsPagedAsync(
+        Guid parkingLotId, Guid? zoneId, string? search, int pageNumber, int pageSize, CancellationToken ct = default)
+    {
+        var zones = GetZoneLookup(parkingLotId);
+        var zoneIds = zoneId is not null ? new List<Guid> { zoneId.Value } : zones.Keys.ToList();
+
+        var query = _uow.ParkingSlots.Query().Where(s => zoneIds.Contains(s.ZoneId));
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var keyword = search.Trim().ToLower();
+            query = query.Where(s =>
+                s.Code.ToLower().Contains(keyword) ||
+                (s.Description != null && s.Description.ToLower().Contains(keyword)));
+        }
+
+        var totalCount = query.Count();
+
+        var pageSlots = query
+            .ToList() // sắp xếp theo tầng khu vực cần dữ liệu Zone nên chuyển sang xử lý trong bộ nhớ
+            .OrderBy(s => zones[s.ZoneId].Floor)
+            .ThenBy(s => s.Code)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        var items = new List<SlotStatusDto>();
+        foreach (var slot in pageSlots)
+            items.Add(await MapToStatusDtoAsync(slot, zones[slot.ZoneId], ct));
+
+        return new PagedResult<SlotStatusDto>
+        {
+            Items = items,
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            TotalCount = totalCount
+        };
     }
 
     public async Task SetMaintenanceAsync(Guid slotId, bool underMaintenance, CancellationToken ct = default)
@@ -87,7 +108,7 @@ public class SlotService : ISlotService
         foreach (var zone in zones)
         {
             var slotCount = _uow.ParkingSlots.Query().Count(s => s.ZoneId == zone.Id);
-            result.Add(new ZoneDto(zone.Id, zone.Name, zone.Floor, slotCount));
+            result.Add(new ZoneDto(zone.Id, zone.Name, zone.Floor, zone.Description, slotCount));
         }
 
         return result;
@@ -102,13 +123,29 @@ public class SlotService : ISlotService
         {
             ParkingLotId = parkingLot.Id,
             Name = request.Name,
-            Floor = request.Floor
+            Floor = request.Floor,
+            Description = request.Description
         };
 
         await _uow.Zones.AddAsync(zone, ct);
         await _uow.SaveChangesAsync(ct);
 
-        return new ZoneDto(zone.Id, zone.Name, zone.Floor, 0);
+        return new ZoneDto(zone.Id, zone.Name, zone.Floor, zone.Description, 0);
+    }
+
+    public async Task<ZoneDto> UpdateZoneAsync(Guid zoneId, UpdateZoneRequest request, CancellationToken ct = default)
+    {
+        var zone = await _uow.Zones.GetByIdAsync(zoneId, ct)
+            ?? throw new NotFoundException(nameof(Zone), zoneId);
+
+        zone.Name = request.Name;
+        zone.Floor = request.Floor;
+        zone.Description = request.Description;
+        _uow.Zones.Update(zone);
+        await _uow.SaveChangesAsync(ct);
+
+        var slotCount = _uow.ParkingSlots.Query().Count(s => s.ZoneId == zone.Id);
+        return new ZoneDto(zone.Id, zone.Name, zone.Floor, zone.Description, slotCount);
     }
 
     public async Task<SlotStatusDto> CreateSlotAsync(CreateSlotRequest request, CancellationToken ct = default)
@@ -126,13 +163,14 @@ public class SlotService : ISlotService
             ZoneId = zone.Id,
             Code = request.Code,
             Type = request.Type,
-            Status = SlotStatus.Trong
+            Status = SlotStatus.Trong,
+            Description = request.Description
         };
 
         await _uow.ParkingSlots.AddAsync(slot, ct);
         await _uow.SaveChangesAsync(ct);
 
-        return new SlotStatusDto(slot.Id, slot.Code, zone.Name, slot.Status.ToString(), slot.Type.ToString(), null);
+        return new SlotStatusDto(slot.Id, zone.Id, slot.Code, zone.Name, slot.Status.ToString(), slot.Type.ToString(), slot.Description, null);
     }
 
     public async Task<SlotStatusDto> UpdateSlotAsync(Guid slotId, UpdateSlotRequest request, CancellationToken ct = default)
@@ -156,9 +194,32 @@ public class SlotService : ISlotService
 
         slot.Code = request.Code;
         slot.Type = request.Type;
+        slot.Description = request.Description;
         _uow.ParkingSlots.Update(slot);
         await _uow.SaveChangesAsync(ct);
 
-        return new SlotStatusDto(slot.Id, slot.Code, zone.Name, slot.Status.ToString(), slot.Type.ToString(), null);
+        return await MapToStatusDtoAsync(slot, zone, ct);
+    }
+
+    // ---- Helpers ----
+
+    private Dictionary<Guid, Zone> GetZoneLookup(Guid parkingLotId) =>
+        _uow.Zones.Query().Where(z => z.ParkingLotId == parkingLotId).ToList().ToDictionary(z => z.Id);
+
+    private async Task<SlotStatusDto> MapToStatusDtoAsync(ParkingSlot slot, Zone zone, CancellationToken ct)
+    {
+        string? plate = null;
+        if (slot.Status == SlotStatus.DangDauXe)
+        {
+            var activeSession = await _uow.ParkingSessions.FirstOrDefaultAsync(
+                s => s.SlotId == slot.Id && s.Status == SessionStatus.DangGuiXe, ct);
+            if (activeSession is not null)
+            {
+                var vehicle = await _uow.Vehicles.GetByIdAsync(activeSession.VehicleId, ct);
+                plate = vehicle?.LicensePlate;
+            }
+        }
+
+        return new SlotStatusDto(slot.Id, zone.Id, slot.Code, zone.Name, slot.Status.ToString(), slot.Type.ToString(), slot.Description, plate);
     }
 }

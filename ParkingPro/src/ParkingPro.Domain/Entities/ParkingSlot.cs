@@ -11,6 +11,7 @@ public class ParkingSlot : BaseEntity
     public string Code { get; set; } = default!; // vd: "A-01"
     public SlotType Type { get; set; } = SlotType.Thuong;
     public SlotStatus Status { get; set; } = SlotStatus.Trong;
+    public string? Description { get; set; }
 
     public ICollection<ParkingSession> Sessions { get; set; } = new List<ParkingSession>();
     public ICollection<MonthlyContract> MonthlyContracts { get; set; } = new List<MonthlyContract>();

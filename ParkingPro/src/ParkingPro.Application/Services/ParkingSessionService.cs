@@ -206,6 +206,18 @@ public class ParkingSessionService : IParkingSessionService
         };
     }
 
+    public async Task<ParkingSessionDto> GetActiveSessionBySlotAsync(Guid slotId, CancellationToken ct = default)
+    {
+        var session = await _uow.ParkingSessions.FirstOrDefaultAsync(
+            s => s.SlotId == slotId && s.Status == SessionStatus.DangGuiXe, ct)
+            ?? throw new NotFoundException("Phiên gửi xe đang hoạt động cho slot", slotId);
+
+        var vehicle = await _uow.Vehicles.GetByIdAsync(session.VehicleId, ct);
+        var slot = await _uow.ParkingSlots.GetByIdAsync(session.SlotId, ct);
+
+        return MapToDto(session, vehicle, slot);
+    }
+
     private static ParkingSessionDto MapToDto(ParkingSession session, Vehicle? vehicle, ParkingSlot? slot) =>
         new(
             session.Id,

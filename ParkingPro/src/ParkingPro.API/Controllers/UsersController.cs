@@ -43,6 +43,22 @@ public class UsersController : ControllerBase
         return Ok(new { avatarUrl });
     }
 
+    /// <summary>Tự sửa hồ sơ (họ tên, số điện thoại) của tài khoản đang đăng nhập.</summary>
+    [HttpPut("me")]
+    public async Task<IActionResult> UpdateMe(UpdateProfileRequest request, CancellationToken ct)
+    {
+        var result = await _userService.UpdateProfileAsync(_currentUser.UserId!.Value, request.FullName, request.PhoneNumber, ct);
+        return Ok(result);
+    }
+
+    /// <summary>Đổi mật khẩu cho tài khoản đang đăng nhập.</summary>
+    [HttpPost("me/change-password")]
+    public async Task<IActionResult> ChangePassword(ChangePasswordRequest request, CancellationToken ct)
+    {
+        await _userService.ChangePasswordAsync(_currentUser.UserId!.Value, request.CurrentPassword, request.NewPassword, ct);
+        return NoContent();
+    }
+
     /// <summary>Danh sách tài khoản (quản lý nhân sự) — lọc theo role nếu có truyền.</summary>
     [HttpGet]
     [RequireRole("Admin")]

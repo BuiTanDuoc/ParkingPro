@@ -133,7 +133,10 @@ Controller/Service khác.
 - Infrastructure: EF Core DbContext (soft-delete filter, audit tự động), Generic Repository + UnitOfWork (hỗ trợ transaction), SignalR Hub + Notifier, JWT + BCrypt, RBAC (RequireRoleAttribute/RolePolicyProvider/RoleAuthorizationHandler)
 - API: Controllers cho Auth/Sessions/Slots/MonthlyContracts/Reports/Users, ExceptionHandlingMiddleware, CORS, Swagger có nút Authorize
 - Quản lý người dùng (Admin): `GET /api/users` (danh sách, lọc theo role), `POST /api/users` (tạo tài khoản Staff/Manager/Admin), `PUT /api/users/{id}/active` (khóa/mở khóa)
-- Quản lý khu vực & slot (Admin/Manager): `GET/POST /api/slots/zones`, `POST /api/slots` (tạo slot), `PUT /api/slots/{id}` (sửa mã/loại — chặn khi slot đang có xe)
+- Quản lý khu vực & slot (Admin/Manager): `GET/POST /api/slots/zones`, `PUT /api/slots/zones/{id}` (sửa tên/tầng/mô tả), `GET /api/slots` (phân trang, lọc khu vực, tìm theo mã/mô tả), `POST /api/slots` (tạo slot), `PUT /api/slots/{id}` (sửa mã/loại/mô tả — chặn khi slot đang có xe)
+- `Zone`/`ParkingSlot` có thêm field `Description`
+- Menu thao tác nhanh theo slot: `GET /api/monthly-contracts/by-slot/{slotId}` (xem hợp đồng vé tháng gắn với slot), `GET /api/sessions/by-slot/{slotId}/active` (xem phiên đang gửi tại slot)
+- Hồ sơ cá nhân: `PUT /api/users/me` (sửa họ tên/SĐT), `POST /api/users/me/change-password` (đổi mật khẩu)
 - Data Seeder tự động chạy ở Development: tài khoản Admin/Manager/Staff mẫu, 1 bãi xe, 2 khu, 40 slot, bảng giá đủ 3 hình thức
 - Hangfire: 2 recurring job (nhắc gia hạn vé tháng sắp hết hạn, tự chuyển hợp đồng quá hạn sang HetHan + giải phóng slot), Dashboard bảo vệ bằng Basic Auth ngoài Development
 - Upload ảnh (avatar, ảnh xe, ảnh check-in/out) qua `IFileStorageService`/`LocalFileStorageService`, tất cả không bắt buộc và có ảnh mặc định
@@ -142,6 +145,7 @@ Controller/Service khác.
 **Bug đã sửa (navigation property null vì `IRepository.Query()`/`GetByIdAsync` không `Include`):**
 - `SlotService.SetMaintenanceAsync`: gọi `slot.Zone.ParkingLotId` nhưng `Zone` chưa từng được load kèm → `NullReferenceException` khi bật/tắt bảo trì. Đã sửa bằng cách lấy `Zone` riêng qua `_uow.Zones.GetByIdAsync(...)`.
 - `SlotService.GetSlotStatusesAsync`: tương tự, gọi `slot.Zone.Name` sau khi `.ToList()` → `NullReferenceException` khi gọi `GET /api/slots/status`. Đã sửa bằng cách lấy trước danh sách `Zone` của bãi xe, dựng `Dictionary<Guid, Zone>`, rồi tự "join" bằng tay thay vì dựa vào navigation property.
+- `MonthlyContractService.RenewAsync`/`GetExpiringSoonAsync`: không crash nhưng trả **sai dữ liệu** — `MapToDto` đọc `c.Vehicle`/`c.CustomerUser`/`c.FixedSlot` trong khi các entity lấy qua `GetByIdAsync`/`Query()` không hề Include, nên luôn ra `"N/A"` dù có dữ liệu thật. Đã sửa bằng `MapToDtoAsync` — dùng navigation nếu đã có sẵn (như lúc `CreateAsync` tự gán), ngược lại tự fetch riêng qua `_uow`.
 
 ⚠️ Đây là lỗi mang tính hệ thống của cách tiếp cận `IRepository<T>` hiện tại (không hỗ trợ `Include`) — nếu
 bạn viết thêm Service mới, **tuyệt đối tránh** truy cập navigation property (`entity.NavProp.X`) trên kết quả

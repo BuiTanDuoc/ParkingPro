@@ -70,4 +70,13 @@ public class MonthlyContractsController : ControllerBase
         var result = await _contractService.GetExpiringSoonAsync(parkingLotId, withinDays, pageNumber, pageSize, ct);
         return Ok(result);
     }
+
+    /// <summary>Hợp đồng đang hoạt động gắn với 1 slot cố định — dùng cho menu "Xem HĐ" trên sơ đồ bãi xe.</summary>
+    [HttpGet("by-slot/{slotId:guid}")]
+    [RequireRole("Admin", "Manager", "Staff")]
+    public async Task<IActionResult> GetBySlot(Guid slotId, CancellationToken ct)
+    {
+        var result = await _contractService.GetActiveContractBySlotAsync(slotId, ct);
+        return Ok(result);
+    }
 }
