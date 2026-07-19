@@ -137,6 +137,7 @@ Controller/Service khác.
 - `Zone`/`ParkingSlot` có thêm field `Description`
 - Menu thao tác nhanh theo slot: `GET /api/monthly-contracts/by-slot/{slotId}` (xem hợp đồng vé tháng gắn với slot), `GET /api/sessions/by-slot/{slotId}/active` (xem phiên đang gửi tại slot)
 - Hồ sơ cá nhân: `PUT /api/users/me` (sửa họ tên/SĐT), `POST /api/users/me/change-password` (đổi mật khẩu)
+- **Swagger đầy đủ schema request/response**: mọi action đều trả `ActionResult<T>` cụ thể (không còn `IActionResult` chung chung khiến Swagger không suy ra được response body), enum hiển thị dạng tên chuỗi (`JsonStringEnumConverter`) thay vì số, XML doc comment (`///`) cho toàn bộ action + DTO chính, tự động gắn response 400/401/403/404/409/500 (kèm schema lỗi `ErrorResponseDto` chuẩn theo `ExceptionHandlingMiddleware`) cho mọi endpoint qua `DefaultResponseTypesOperationFilter`
 - Data Seeder tự động chạy ở Development: tài khoản Admin/Manager/Staff mẫu, 1 bãi xe, 2 khu, 40 slot, bảng giá đủ 3 hình thức
 - Hangfire: 2 recurring job (nhắc gia hạn vé tháng sắp hết hạn, tự chuyển hợp đồng quá hạn sang HetHan + giải phóng slot), Dashboard bảo vệ bằng Basic Auth ngoài Development
 - Upload ảnh (avatar, ảnh xe, ảnh check-in/out) qua `IFileStorageService`/`LocalFileStorageService`, tất cả không bắt buộc và có ảnh mặc định
@@ -152,6 +153,14 @@ bạn viết thêm Service mới, **tuyệt đối tránh** truy cập navigatio
 trả về từ `GetByIdAsync`/`FirstOrDefaultAsync`/`Query().ToList()` trừ khi chỉ dùng trong mệnh đề `Where(...)`
 để lọc (EF dịch sang SQL JOIN, an toàn, không cần Include) — còn muốn *đọc* dữ liệu của navigation sau khi
 đã có kết quả thì phải tự fetch riêng (như 2 chỗ trên) hoặc mở rộng `IRepository<T>` để hỗ trợ `Include`.
+
+**Bug tiềm ẩn khác vừa được phát hiện & sửa khi hoàn thiện Swagger:** trước khi thêm `JsonStringEnumConverter`
+(mục Swagger ở trên), các endpoint nhận JSON body có field enum — `POST/PUT /api/slots`, `POST/PUT /api/slots/zones`
+không có field enum nên không ảnh hưởng, nhưng **`CreateSlotRequest`/`UpdateSlotRequest` có field `Type` (SlotType)**
+— nếu FE gửi `"type": "Thuong"` (chuỗi, đúng như Admin Web đang làm) mà backend chưa cấu hình
+`JsonStringEnumConverter`, System.Text.Json mặc định chỉ chấp nhận enum dạng số và sẽ trả lỗi `400 Bad Request`
+("Vui lòng nhập số")! Việc thêm `JsonStringEnumConverter` toàn cục vừa fix bug Swagger vừa fix luôn lỗi 400
+tiềm ẩn này cho `POST/PUT /api/slots` — nếu bạn đã từng gặp lỗi 400 khó hiểu khi tạo/sửa slot ở bản trước, đây chính là nguyên nhân.
 
 ## Chưa làm trong bản scaffold này (gợi ý bước tiếp theo)
 

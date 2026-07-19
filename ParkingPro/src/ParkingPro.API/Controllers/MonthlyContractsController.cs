@@ -2,15 +2,18 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ParkingPro.API.Common;
 using ParkingPro.API.Requests;
+using ParkingPro.Application.Common;
 using ParkingPro.Application.DTOs.MonthlyContracts;
 using ParkingPro.Application.Interfaces.Services;
 using ParkingPro.Infrastructure.Authorization;
 
 namespace ParkingPro.API.Controllers;
 
+/// <summary>Quản lý hợp đồng gửi xe theo tháng (vé tháng): tạo, gia hạn, hủy.</summary>
 [ApiController]
 [Authorize]
 [Route("api/monthly-contracts")]
+[Produces("application/json")]
 public class MonthlyContractsController : ControllerBase
 {
     private readonly IMonthlyContractService _contractService;
@@ -26,7 +29,8 @@ public class MonthlyContractsController : ControllerBase
     [HttpPost]
     [Consumes("multipart/form-data")]
     [RequireRole("Admin", "Manager", "Staff")]
-    public async Task<IActionResult> Create([FromForm] CreateMonthlyContractFormRequest form, CancellationToken ct)
+    [ProducesResponseType(typeof(MonthlyContractDto), StatusCodes.Status201Created)]
+    public async Task<ActionResult<MonthlyContractDto>> Create([FromForm] CreateMonthlyContractFormRequest form, CancellationToken ct)
     {
         var request = new CreateMonthlyContractRequest(
             form.ParkingLotId, form.CustomerUserId, form.LicensePlate,
@@ -45,25 +49,31 @@ public class MonthlyContractsController : ControllerBase
         return CreatedAtAction(nameof(Create), new { id = result.Id }, result);
     }
 
+    /// <summary>Gia hạn thêm N tháng cho hợp đồng, tự tạo Payment tương ứng.</summary>
     [HttpPost("{id:guid}/renew")]
     [RequireRole("Admin", "Manager", "Staff")]
-    public async Task<IActionResult> Renew(Guid id, [FromQuery] int additionalMonths, CancellationToken ct)
+    [ProducesResponseType(typeof(MonthlyContractDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<MonthlyContractDto>> Renew(Guid id, [FromQuery] int additionalMonths, CancellationToken ct)
     {
         var result = await _contractService.RenewAsync(id, additionalMonths, _currentUser.UserId!.Value, ct);
         return Ok(result);
     }
 
+    /// <summary>Hủy hợp đồng, giải phóng slot cố định (nếu có) về trạng thái Trống.</summary>
     [HttpPost("{id:guid}/cancel")]
     [RequireRole("Admin", "Manager")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Cancel(Guid id, CancellationToken ct)
     {
         await _contractService.CancelAsync(id, ct);
         return NoContent();
     }
 
+    /// <summary>Hợp đồng đang hoạt động sắp/đã hết hạn trong N ngày qua, có phân trang.</summary>
     [HttpGet("expiring-soon")]
     [RequireRole("Admin", "Manager")]
-    public async Task<IActionResult> GetExpiringSoon(
+    [ProducesResponseType(typeof(PagedResult<MonthlyContractDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PagedResult<MonthlyContractDto>>> GetExpiringSoon(
         [FromQuery] Guid parkingLotId, [FromQuery] int withinDays = 7,
         [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
     {
@@ -74,7 +84,8 @@ public class MonthlyContractsController : ControllerBase
     /// <summary>Hợp đồng đang hoạt động gắn với 1 slot cố định — dùng cho menu "Xem HĐ" trên sơ đồ bãi xe.</summary>
     [HttpGet("by-slot/{slotId:guid}")]
     [RequireRole("Admin", "Manager", "Staff")]
-    public async Task<IActionResult> GetBySlot(Guid slotId, CancellationToken ct)
+    [ProducesResponseType(typeof(MonthlyContractDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<MonthlyContractDto>> GetBySlot(Guid slotId, CancellationToken ct)
     {
         var result = await _contractService.GetActiveContractBySlotAsync(slotId, ct);
         return Ok(result);

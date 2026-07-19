@@ -1,6 +1,10 @@
+using System.Reflection;
+using System.Text.Json.Serialization;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 using ParkingPro.API.Middleware;
+using ParkingPro.API.Swagger;
 using ParkingPro.Application.Interfaces.Services;
 using ParkingPro.Infrastructure;
 using ParkingPro.Infrastructure.Authorization;
@@ -9,27 +13,58 @@ using ParkingPro.Infrastructure.Hubs;
 var builder = WebApplication.CreateBuilder(args);
 
 // --- Services ---
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Enum trả về/nhận vào dạng tên chuỗi (vd "TheoGio") thay vì số (0) — cả request lẫn response,
+        // đồng thời Swagger tự nhận diện converter này để hiển thị đúng schema enum dạng string.
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "ParkingPro API",
+        Version = "v1",
+        Description = "API quản lý bãi giữ xe ô tô: gửi xe theo giờ/ngày, vé tháng, khu vực & slot, báo cáo, người dùng."
+    });
+
+    // Đọc XML doc comment (///) từ cả 2 assembly để hiển thị mô tả action + field DTO đầy đủ trên Swagger UI.
+    // Yêu cầu <GenerateDocumentationFile>true</GenerateDocumentationFile> ở cả 2 csproj (API và Application).
+    var apiXmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var apiXmlPath = Path.Combine(AppContext.BaseDirectory, apiXmlFile);
+    if (File.Exists(apiXmlPath))
+        options.IncludeXmlComments(apiXmlPath);
+
+    var applicationXmlFile = "ParkingPro.Application.xml";
+    var applicationXmlPath = Path.Combine(AppContext.BaseDirectory, applicationXmlFile);
+    if (File.Exists(applicationXmlPath))
+        options.IncludeXmlComments(applicationXmlPath);
+
+    // Đánh dấu property không nullable trong DTO là "required" trên schema (rõ ràng hơn cho FE khi đọc Swagger).
+    options.SupportNonNullableReferenceTypes();
+
+    // Tự động gắn response 400/401/403/404/409/500 (kèm schema lỗi chuẩn) cho mọi endpoint.
+    options.OperationFilter<DefaultResponseTypesOperationFilter>();
+
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Type = SecuritySchemeType.Http,
         Scheme = "Bearer",
         BearerFormat = "JWT",
-        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        In = ParameterLocation.Header,
         Description = "Nhập JWT access token, ví dụ: Bearer {token}"
     });
-    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            new OpenApiSecurityScheme
             {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                Reference = new OpenApiReference
                 {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Type = ReferenceType.SecurityScheme,
                     Id = "Bearer"
                 }
             },
