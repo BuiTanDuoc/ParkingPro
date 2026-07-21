@@ -10,6 +10,7 @@ export type SetupStackParamList = {
 
 export type MainTabParamList = {
   Map: undefined;
+  Dashboard: undefined;
   CheckIn: undefined;
   Sessions: undefined;
   Contracts: undefined;

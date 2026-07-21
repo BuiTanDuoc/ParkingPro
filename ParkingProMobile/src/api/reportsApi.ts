@@ -2,9 +2,10 @@ import { apiClient } from './client';
 import { OccupancyReportDto, RevenueReportDto } from '../types/api';
 
 export const reportsApi = {
-  getRevenue: (fromDate: string, toDate: string) =>
+  /** fromDate/toDate dạng "yyyy-MM-dd". */
+  getRevenue: (parkingLotId: string, fromDate: string, toDate: string) =>
     apiClient
-      .get<RevenueReportDto[]>('/reports/revenue', { params: { fromDate, toDate } })
+      .get<RevenueReportDto[]>('/reports/revenue', { params: { parkingLotId, fromDate, toDate } })
       .then(r => r.data),
 
   getOccupancy: (parkingLotId: string) =>

@@ -6,6 +6,7 @@ import { colors } from '../theme/colors';
 import { MainTabParamList } from './types';
 
 import ParkingMapScreen from '../screens/map/ParkingMapScreen';
+import DashboardScreen from '../screens/dashboard/DashboardScreen';
 import CheckInScreen from '../screens/sessions/CheckInScreen';
 import ActiveSessionsScreen from '../screens/sessions/ActiveSessionsScreen';
 import MonthlyContractsScreen from '../screens/contracts/MonthlyContractsScreen';
@@ -48,6 +49,16 @@ export default function MainTabNavigator() {
           tabBarIcon: ({ focused }) => <TabIcon emoji="🅿️" focused={focused} />,
         }}
       />
+      {isManagerOrAdmin && (
+        <Tab.Screen
+          name="Dashboard"
+          component={DashboardScreen}
+          options={{
+            title: 'Dashboard',
+            tabBarIcon: ({ focused }) => <TabIcon emoji="📈" focused={focused} />,
+          }}
+        />
+      )}
       <Tab.Screen
         name="CheckIn"
         component={CheckInScreen}

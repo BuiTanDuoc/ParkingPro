@@ -135,16 +135,19 @@ export interface RegisterCustomerResponse {
 }
 
 export interface RevenueReportDto {
-  date: string;
-  totalAmount: number;
-  sessionCount: number;
+  date: string; // DateOnly -> "yyyy-MM-dd"
+  hourlyRevenue: number;
+  dailyRevenue: number;
+  monthlyRevenue: number;
+  totalRevenue: number;
 }
 
 export interface OccupancyReportDto {
-  parkingLotId: string;
   totalSlots: number;
   occupiedSlots: number;
-  occupancyRate: number;
+  availableSlots: number;
+  maintenanceSlots: number;
+  occupancyRatePercent: number; // đã tính sẵn theo % (0-100), không phải phân số 0-1
 }
 
 export interface PagedResult<T> {
