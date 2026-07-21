@@ -156,6 +156,33 @@ public class MonthlyContractService : IMonthlyContractService
         return await MapToDtoAsync(contract, ct);
     }
 
+    public async Task<MonthlyContractDto> UpdateAsync(Guid contractId, UpdateMonthlyContractRequest request, CancellationToken ct = default)
+    {
+        var contract = await _uow.MonthlyContracts.GetByIdAsync(contractId, ct)
+            ?? throw new NotFoundException(nameof(MonthlyContract), contractId);
+
+        if (contract.Status == ContractStatus.DaHuy)
+            throw new ConflictException("Không thể sửa hợp đồng đã bị hủy.");
+
+        if (string.IsNullOrWhiteSpace(request.LicensePlate))
+            throw new BadRequestException("Biển số xe không được để trống.");
+
+        var vehicle = await _uow.Vehicles.GetByIdAsync(contract.VehicleId, ct);
+        if (vehicle is not null &&
+            !string.Equals(vehicle.LicensePlate, request.LicensePlate, StringComparison.OrdinalIgnoreCase))
+        {
+            vehicle.LicensePlate = request.LicensePlate;
+            _uow.Vehicles.Update(vehicle);
+        }
+
+        contract.AutoRenew = request.AutoRenew;
+        _uow.MonthlyContracts.Update(contract);
+
+        await _uow.SaveChangesAsync(ct);
+
+        return await MapToDtoAsync(contract, ct);
+    }
+
     public async Task CancelAsync(Guid contractId, CancellationToken ct = default)
     {
         var contract = await _uow.MonthlyContracts.GetByIdAsync(contractId, ct)
@@ -198,6 +225,42 @@ public class MonthlyContractService : IMonthlyContractService
         return new PagedResult<MonthlyContractDto>
         {
             Items = items,
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            TotalCount = totalCount
+        };
+    }
+
+    public async Task<PagedResult<MonthlyContractDto>> GetAllAsync(
+        Guid parkingLotId, string? status, string? search, int pageNumber, int pageSize, CancellationToken ct = default)
+    {
+        var query = _uow.MonthlyContracts.Query().Where(c => c.ParkingLotId == parkingLotId);
+
+        if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<ContractStatus>(status, true, out var statusEnum))
+            query = query.Where(c => c.Status == statusEnum);
+
+        var contracts = query.OrderBy(c => c.EndDate).ToList();
+
+        var items = new List<MonthlyContractDto>();
+        foreach (var contract in contracts)
+            items.Add(await MapToDtoAsync(contract, ct));
+
+        // Tìm theo biển số/tên khách hàng thực hiện ở tầng ứng dụng vì 2 field này
+        // nằm ở Vehicle/User, không có trên MonthlyContract để lọc trực tiếp bằng SQL.
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var keyword = search.Trim().ToLower();
+            items = items
+                .Where(i => i.LicensePlate.ToLower().Contains(keyword) || i.CustomerName.ToLower().Contains(keyword))
+                .ToList();
+        }
+
+        var totalCount = items.Count;
+        var pageItems = items.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+
+        return new PagedResult<MonthlyContractDto>
+        {
+            Items = pageItems,
             PageNumber = pageNumber,
             PageSize = pageSize,
             TotalCount = totalCount

@@ -40,6 +40,7 @@ public static class DependencyInjection
         services.AddScoped<IReportService, ReportService>();
         services.AddScoped<IMonthlyContractMaintenanceService, MonthlyContractMaintenanceService>();
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IParkingLotService, ParkingLotService>();
 
         // --- Lưu file (avatar, ảnh xe, ảnh check-in/out) ---
         services.AddScoped<IFileStorageService, LocalFileStorageService>();

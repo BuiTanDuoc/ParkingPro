@@ -59,6 +59,28 @@ public class MonthlyContractsController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>Toàn bộ hợp đồng của 1 bãi xe, có phân trang — dùng cho tab Hợp đồng. Lọc theo trạng thái và/hoặc tìm theo biển số/tên khách hàng.</summary>
+    [HttpGet]
+    [RequireRole("Admin", "Manager", "Staff")]
+    [ProducesResponseType(typeof(PagedResult<MonthlyContractDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PagedResult<MonthlyContractDto>>> GetAll(
+        [FromQuery] Guid parkingLotId, [FromQuery] string? status, [FromQuery] string? search,
+        [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+    {
+        var result = await _contractService.GetAllAsync(parkingLotId, status, search, pageNumber, pageSize, ct);
+        return Ok(result);
+    }
+
+    /// <summary>Sửa biển số xe và/hoặc tự động gia hạn của hợp đồng. Không đổi được slot cố định hay ngày hiệu lực qua endpoint này — dùng /renew để gia hạn.</summary>
+    [HttpPut("{id:guid}")]
+    [RequireRole("Admin", "Manager", "Staff")]
+    [ProducesResponseType(typeof(MonthlyContractDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<MonthlyContractDto>> Update(Guid id, UpdateMonthlyContractRequest request, CancellationToken ct)
+    {
+        var result = await _contractService.UpdateAsync(id, request, ct);
+        return Ok(result);
+    }
+
     /// <summary>Hủy hợp đồng, giải phóng slot cố định (nếu có) về trạng thái Trống.</summary>
     [HttpPost("{id:guid}/cancel")]
     [RequireRole("Admin", "Manager")]
