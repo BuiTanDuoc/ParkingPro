@@ -9,6 +9,11 @@
   <meta charset="utf-8">
   <title><%= config.options.title || 'React Dashboard'%></title>
 
+  <!-- Cau hinh runtime (DEFAULT_PARKING_LOT_ID, API_BASE_URL...) - file dist/config.js khong bi
+       Webpack bundle, sua duoc truc tiep tren server sau khi build production, khong can build lai.
+       Phai la script chan (khong defer/async) de chay truoc cac bundle script ben duoi. -->
+  <script src="<%= (typeof process !== 'undefined' && process.env.BASE_PATH) || '/' %>config.js"></script>
+
   <% if (config.files.favicon) { %>
   <link rel="shortcut icon" href="<%= config.files.favicon%>">
   <% } %>

@@ -1,12 +1,18 @@
 // Lớp gọi API dùng chung: tự đính kèm JWT, tự refresh token khi hết hạn (401),
 // và tự phát sự kiện "auth:logout" khi refresh thất bại để AuthContext xử lý.
 
+import { getRuntimeConfig } from './../config/runtimeConfig';
+
 const ACCESS_TOKEN_KEY = 'parkingpro_access_token';
 const REFRESH_TOKEN_KEY = 'parkingpro_refresh_token';
 
-export const getApiBaseUrl = () =>
-    (typeof process !== 'undefined' && process.env && process.env.API_BASE_URL) ||
-    'http://localhost:5080';
+// Thứ tự ưu tiên: window.__APP_CONFIG__ (dist/config.js, sửa được sau khi build)
+// -> process.env.API_BASE_URL (bake lúc build) -> localhost mặc định cho dev.
+export const getApiBaseUrl = () => {
+    const buildTimeValue =
+        (typeof process !== 'undefined' && process.env && process.env.API_BASE_URL) || 'http://localhost:5080';
+    return getRuntimeConfig('API_BASE_URL', buildTimeValue);
+};
 
 export const tokenStorage = {
     getAccessToken: () => localStorage.getItem(ACCESS_TOKEN_KEY),
