@@ -11,7 +11,7 @@ import { DEFAULT_PARKING_LOT_ID } from './../../config/parkingLot';
 const formatDate = (date) => date.toISOString().slice(0, 10);
 
 const StatCard = ({ title, value, colorClass }) => (
-    <Col lg={3} md={6} className="mb-3">
+    <Col lg={2} md={4} sm={6} className="mb-3">
         <Card className="h-100">
             <CardBody>
                 <CardTitle tag="h6" className="text-muted mb-3">{title}</CardTitle>
@@ -66,6 +66,8 @@ const Dashboard = () => {
                 <Row>
                     <StatCard title="Tổng số slot" value={occupancy.totalSlots} colorClass="text-primary" />
                     <StatCard title="Đang có xe" value={occupancy.occupiedSlots} colorClass="text-danger" />
+                    <StatCard title="Vé tháng" value={occupancy.reservedSlots} colorClass="text-info" />
+                    <StatCard title="Bảo trì" value={occupancy.maintenanceSlots} colorClass="text-secondary" />
                     <StatCard title="Còn trống" value={occupancy.availableSlots} colorClass="text-success" />
                     <StatCard title="Tỷ lệ lấp đầy" value={`${occupancy.occupancyRatePercent}%`} colorClass="text-warning" />
                 </Row>

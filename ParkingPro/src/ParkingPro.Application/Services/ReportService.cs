@@ -91,15 +91,17 @@ public class ReportService : IReportService
 
         var totalSlots = slots.Count;
         var occupiedSlots = slots.Count(s => s.Status == SlotStatus.DangDauXe);
+        var reservedSlots = slots.Count(s => s.Status == SlotStatus.DaDatTruoc);
         var availableSlots = slots.Count(s => s.Status == SlotStatus.Trong);
         var maintenanceSlots = slots.Count(s => s.Status == SlotStatus.BaoTri);
 
+        // Tỷ lệ lấp đầy tính cả slot đang có xe vãng lai lẫn slot đã gán cố định cho vé tháng
         var occupancyRate = totalSlots == 0
             ? 0d
-            : Math.Round((double)occupiedSlots / totalSlots * 100, 2);
+            : Math.Round((double)(occupiedSlots + reservedSlots) / totalSlots * 100, 2);
 
         await Task.CompletedTask; // giữ signature async cho nhất quán với các Service khác, sẵn sàng mở rộng I/O sau này
 
-        return new OccupancyReportDto(totalSlots, occupiedSlots, availableSlots, maintenanceSlots, occupancyRate);
+        return new OccupancyReportDto(totalSlots, occupiedSlots, reservedSlots, availableSlots, maintenanceSlots, occupancyRate);
     }
 }
