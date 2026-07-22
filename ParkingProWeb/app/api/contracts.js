@@ -4,6 +4,21 @@ export const getExpiringSoon = (parkingLotId, withinDays = 7, pageNumber = 1, pa
     apiFetch(`/api/monthly-contracts/expiring-soon?parkingLotId=${parkingLotId}&withinDays=${withinDays}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
 
 /**
+ * Tab "Quản lý hợp đồng": toàn bộ HĐ còn hạn hoặc hết hạn, có lọc + phân trang.
+ * @param {object} opts - { status?, search?, maxExpiredMonths? (bỏ trống/null = lấy tất cả), pageNumber, pageSize }
+ */
+export const getAllContracts = (parkingLotId, opts = {}) => {
+    const { status, search, maxExpiredMonths, pageNumber = 1, pageSize = 20 } = opts;
+    const params = new URLSearchParams({ parkingLotId, pageNumber, pageSize });
+    if (status) params.append('status', status);
+    if (search) params.append('search', search);
+    if (maxExpiredMonths !== undefined && maxExpiredMonths !== null && maxExpiredMonths !== '') {
+        params.append('maxExpiredMonths', maxExpiredMonths);
+    }
+    return apiFetch(`/api/monthly-contracts?${params.toString()}`);
+};
+
+/**
  * @param {object} fields - { parkingLotId, customerUserId?, newCustomerFullName?, newCustomerEmail?, newCustomerPassword?,
  *   newCustomerPhoneNumber?, licensePlate, fixedSlotId?, startDate, numberOfMonths, autoRenew }
  * @param {File|null} vehiclePhotoFile

@@ -60,15 +60,20 @@ public class MonthlyContractsController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>Toàn bộ hợp đồng của 1 bãi xe, có phân trang — dùng cho tab Hợp đồng. Lọc theo trạng thái và/hoặc tìm theo biển số/tên khách hàng.</summary>
+    /// <summary>
+    /// Toàn bộ hợp đồng của 1 bãi xe, có phân trang — dùng cho tab Quản lý hợp đồng. Lọc theo trạng thái,
+    /// tìm theo biển số/tên khách hàng, và/hoặc giới hạn không lấy HĐ đã hết hạn quá maxExpiredMonths tháng
+    /// (để trống thì lấy tất cả, không giới hạn theo thời gian hết hạn).
+    /// </summary>
     [HttpGet]
     [RequireRole("Admin", "Manager", "Staff")]
     [ProducesResponseType(typeof(PagedResult<MonthlyContractDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<PagedResult<MonthlyContractDto>>> GetAll(
         [FromQuery] Guid parkingLotId, [FromQuery] string? status, [FromQuery] string? search,
+        [FromQuery] int? maxExpiredMonths,
         [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
     {
-        var result = await _contractService.GetAllAsync(parkingLotId, status, search, pageNumber, pageSize, ct);
+        var result = await _contractService.GetAllAsync(parkingLotId, status, search, maxExpiredMonths, pageNumber, pageSize, ct);
         return Ok(result);
     }
 

@@ -289,12 +289,20 @@ public class MonthlyContractService : IMonthlyContractService
     }
 
     public async Task<PagedResult<MonthlyContractDto>> GetAllAsync(
-        Guid parkingLotId, string? status, string? search, int pageNumber, int pageSize, CancellationToken ct = default)
+        Guid parkingLotId, string? status, string? search, int? maxExpiredMonths, int pageNumber, int pageSize, CancellationToken ct = default)
     {
         var query = _uow.MonthlyContracts.Query().Where(c => c.ParkingLotId == parkingLotId);
 
         if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<ContractStatus>(status, true, out var statusEnum))
             query = query.Where(c => c.Status == statusEnum);
+
+        // Giới hạn hợp đồng hết hạn quá lâu để tránh trả về quá nhiều HĐ cũ — hợp đồng còn hiệu lực
+        // (EndDate >= hôm nay) luôn được giữ lại; chỉ hợp đồng đã hết hạn mới bị giới hạn theo mốc này.
+        if (maxExpiredMonths is > 0)
+        {
+            var cutoffDate = DateOnly.FromDateTime(DateTime.UtcNow).AddMonths(-maxExpiredMonths.Value);
+            query = query.Where(c => c.EndDate >= cutoffDate);
+        }
 
         var contracts = query.OrderBy(c => c.EndDate).ToList();
 
