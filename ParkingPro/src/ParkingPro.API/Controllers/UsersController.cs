@@ -66,18 +66,22 @@ public class UsersController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>Danh sách tài khoản (quản lý nhân sự) — lọc theo role nếu có truyền.</summary>
+    /// <summary>
+    /// Danh sách tài khoản, lọc theo role nếu có truyền. Admin xem được mọi role (dùng cho Quản lý người dùng).
+    /// Manager/Staff chỉ xem được role Customer (dùng cho việc chọn khách hàng khi tạo/sửa hợp đồng vé tháng).
+    /// </summary>
     [HttpGet]
-    [RequireRole("Admin")]
+    [RequireRole("Admin", "Manager", "Staff")]
     [ProducesResponseType(typeof(PagedResult<UserProfileDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<PagedResult<UserProfileDto>>> GetAll(
         [FromQuery] string? role, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
     {
-        var result = await _userService.GetAllUsersAsync(role, pageNumber, pageSize, ct);
+        var effectiveRole = _currentUser.Role == "Admin" ? role : "Customer";
+        var result = await _userService.GetAllUsersAsync(effectiveRole, pageNumber, pageSize, ct);
         return Ok(result);
     }
 
-    /// <summary>Tạo tài khoản nội bộ (Staff/Manager/Admin). Chỉ Admin được gọi.</summary>
+    /// <summary>Tạo tài khoản (Staff/Manager/Admin/Customer). Chỉ Admin được gọi.</summary>
     [HttpPost]
     [RequireRole("Admin")]
     [ProducesResponseType(typeof(UserProfileDto), StatusCodes.Status201Created)]

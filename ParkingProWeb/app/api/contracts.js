@@ -4,7 +4,8 @@ export const getExpiringSoon = (parkingLotId, withinDays = 7, pageNumber = 1, pa
     apiFetch(`/api/monthly-contracts/expiring-soon?parkingLotId=${parkingLotId}&withinDays=${withinDays}&pageNumber=${pageNumber}&pageSize=${pageSize}`);
 
 /**
- * @param {object} fields - { parkingLotId, customerUserId, licensePlate, fixedSlotId, startDate, numberOfMonths, autoRenew }
+ * @param {object} fields - { parkingLotId, customerUserId?, newCustomerFullName?, newCustomerEmail?, newCustomerPassword?,
+ *   newCustomerPhoneNumber?, licensePlate, fixedSlotId?, startDate, numberOfMonths, autoRenew }
  * @param {File|null} vehiclePhotoFile
  */
 export const createContract = (fields, vehiclePhotoFile) => {
@@ -16,6 +17,14 @@ export const createContract = (fields, vehiclePhotoFile) => {
 
     return apiFetch('/api/monthly-contracts', { method: 'POST', isFormData: true, body: formData });
 };
+
+/**
+ * @param {string} id
+ * @param {object} fields - { licensePlate, autoRenew, fixedSlotId?, customerUserId?, newCustomerFullName?,
+ *   newCustomerEmail?, newCustomerPassword?, newCustomerPhoneNumber? }
+ */
+export const updateContract = (id, fields) =>
+    apiFetch(`/api/monthly-contracts/${id}`, { method: 'PUT', body: fields });
 
 export const renewContract = (id, additionalMonths) =>
     apiFetch(`/api/monthly-contracts/${id}/renew?additionalMonths=${additionalMonths}`, { method: 'POST' });

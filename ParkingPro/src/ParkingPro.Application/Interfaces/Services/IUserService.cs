@@ -13,7 +13,7 @@ public interface IUserService
     /// <summary>Danh sách tài khoản (Admin dùng để quản lý nhân sự). Lọc theo role nếu có truyền vào.</summary>
     Task<PagedResult<UserProfileDto>> GetAllUsersAsync(string? role, int pageNumber, int pageSize, CancellationToken ct = default);
 
-    /// <summary>Tạo tài khoản nội bộ (Staff/Manager/Admin) — chỉ Admin được gọi.</summary>
+    /// <summary>Tạo tài khoản (Staff/Manager/Admin/Customer) — chỉ Admin được gọi.</summary>
     Task<UserProfileDto> CreateStaffUserAsync(CreateStaffUserRequest request, CancellationToken ct = default);
 
     /// <summary>Khóa/mở khóa tài khoản.</summary>

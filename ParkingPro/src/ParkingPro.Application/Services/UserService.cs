@@ -12,7 +12,8 @@ namespace ParkingPro.Application.Services;
 
 public class UserService : IUserService
 {
-    private static readonly UserRole[] StaffCreatableRoles = { UserRole.Staff, UserRole.Manager, UserRole.Admin };
+    private static readonly UserRole[] StaffCreatableRoles =
+        { UserRole.Staff, UserRole.Manager, UserRole.Admin, UserRole.Customer };
 
     private readonly IUnitOfWork _uow;
     private readonly IFileStorageService _fileStorage;
@@ -73,7 +74,7 @@ public class UserService : IUserService
     public async Task<UserProfileDto> CreateStaffUserAsync(CreateStaffUserRequest request, CancellationToken ct = default)
     {
         if (!Enum.TryParse<UserRole>(request.Role, true, out var role) || !StaffCreatableRoles.Contains(role))
-            throw new BadRequestException("Role phải là Staff, Manager hoặc Admin (dùng /api/auth/register-customer cho khách hàng).");
+            throw new BadRequestException("Role phải là Staff, Manager, Admin hoặc Customer.");
 
         var existing = await _uow.Users.FirstOrDefaultAsync(u => u.Email == request.Email, ct);
         if (existing is not null)

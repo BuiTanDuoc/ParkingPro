@@ -33,8 +33,9 @@ public class MonthlyContractsController : ControllerBase
     public async Task<ActionResult<MonthlyContractDto>> Create([FromForm] CreateMonthlyContractFormRequest form, CancellationToken ct)
     {
         var request = new CreateMonthlyContractRequest(
-            form.ParkingLotId, form.CustomerUserId, form.LicensePlate,
-            form.FixedSlotId, form.StartDate, form.NumberOfMonths, form.AutoRenew);
+            form.ParkingLotId, form.CustomerUserId,
+            form.NewCustomerFullName, form.NewCustomerEmail, form.NewCustomerPassword, form.NewCustomerPhoneNumber,
+            form.LicensePlate, form.FixedSlotId, form.StartDate, form.NumberOfMonths, form.AutoRenew);
 
         Stream? photoStream = null;
         string? photoFileName = null;
@@ -71,7 +72,10 @@ public class MonthlyContractsController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>Sửa biển số xe và/hoặc tự động gia hạn của hợp đồng. Không đổi được slot cố định hay ngày hiệu lực qua endpoint này — dùng /renew để gia hạn.</summary>
+    /// <summary>
+    /// Sửa hợp đồng: biển số xe, tự động gia hạn, slot cố định (gán/đổi/bỏ gán), và/hoặc đổi sang khách hàng khác
+    /// (có sẵn hoặc tạo mới). Không đổi được ngày hiệu lực qua endpoint này — dùng /renew để gia hạn.
+    /// </summary>
     [HttpPut("{id:guid}")]
     [RequireRole("Admin", "Manager", "Staff")]
     [ProducesResponseType(typeof(MonthlyContractDto), StatusCodes.Status200OK)]

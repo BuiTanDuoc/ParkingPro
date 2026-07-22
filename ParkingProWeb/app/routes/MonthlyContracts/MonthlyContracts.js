@@ -3,6 +3,7 @@ import { Container, Row, Col, Card, CardBody, Table, Badge, Button, Alert } from
 
 import { HeaderMain } from '../components/HeaderMain';
 import CreateContractModal from '../components/ParkingPro/CreateContractModal';
+import EditContractModal from '../components/ParkingPro/EditContractModal';
 import { getExpiringSoon, renewContract, cancelContract } from './../../api/contracts';
 import { getApiBaseUrl } from './../../api/http';
 import { DEFAULT_PARKING_LOT_ID } from './../../config/parkingLot';
@@ -16,6 +17,7 @@ const MonthlyContracts = () => {
     const [contracts, setContracts] = useState([]);
     const [error, setError] = useState(null);
     const [createOpen, setCreateOpen] = useState(false);
+    const [editingContract, setEditingContract] = useState(null);
 
     const load = () => {
         if (!DEFAULT_PARKING_LOT_ID) {
@@ -96,6 +98,9 @@ const MonthlyContracts = () => {
                                     <td>{c.endDate}</td>
                                     <td><Badge color={statusColor[c.status] || 'secondary'}>{statusLabel[c.status] || c.status}</Badge></td>
                                     <td className="text-nowrap">
+                                        <Button size="sm" color="secondary" outline className="mr-2" onClick={() => setEditingContract(c)}>
+                                            Sửa
+                                        </Button>
                                         <Button size="sm" color="primary" outline className="mr-2" onClick={() => handleRenew(c.id)}>
                                             Gia hạn
                                         </Button>
@@ -114,6 +119,7 @@ const MonthlyContracts = () => {
             </Card>
 
             <CreateContractModal isOpen={createOpen} toggle={() => setCreateOpen(false)} onSuccess={load} />
+            <EditContractModal contract={editingContract} toggle={() => setEditingContract(null)} onSuccess={load} />
         </Container>
     );
 };

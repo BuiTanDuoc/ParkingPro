@@ -5,6 +5,7 @@ import {
 
 import { getContractBySlot, renewContract, cancelContract } from './../../../api/contracts';
 import { getApiBaseUrl } from './../../../api/http';
+import EditContractModal from './EditContractModal';
 
 const statusColor = { DangHoatDong: 'success', SapHetHan: 'warning', HetHan: 'secondary', DaHuy: 'danger' };
 const statusLabel = { DangHoatDong: 'Đang hoạt động', SapHetHan: 'Sắp hết hạn', HetHan: 'Hết hạn', DaHuy: 'Đã hủy' };
@@ -15,6 +16,7 @@ const ViewContractModal = ({ slotId, toggle, onChanged }) => {
     const [contract, setContract] = useState(null);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [editOpen, setEditOpen] = useState(false);
 
     useEffect(() => {
         if (!slotId) return;
@@ -79,11 +81,20 @@ const ViewContractModal = ({ slotId, toggle, onChanged }) => {
                 <Button color="secondary" onClick={toggle}>Đóng</Button>
                 {contract && contract.status !== 'DaHuy' && (
                     <>
+                        <Button color="secondary" outline onClick={() => setEditOpen(true)}>Sửa</Button>
                         <Button color="primary" outline onClick={handleRenew}>Gia hạn</Button>
                         <Button color="danger" outline onClick={handleCancel}>Hủy hợp đồng</Button>
                     </>
                 )}
             </ModalFooter>
+            <EditContractModal
+                contract={editOpen ? contract : null}
+                toggle={() => setEditOpen(false)}
+                onSuccess={() => {
+                    onChanged();
+                    toggle();
+                }}
+            />
         </Modal>
     );
 };

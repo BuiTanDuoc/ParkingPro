@@ -4,17 +4,20 @@ import {
 } from './../../../components';
 
 import { checkIn } from './../../../api/sessions';
+import { getSlotStatuses } from './../../../api/slots';
 import { DEFAULT_PARKING_LOT_ID } from './../../../config/parkingLot';
 
 /**
- * Modal check-in xe. Dùng chung cho trang Sessions (không chỉ định slot — backend tự chọn slot trống)
- * và menu trên sơ đồ bãi xe (chỉ định sẵn preferredSlotId, khóa lại không cho đổi).
+ * Modal check-in xe. Dùng chung cho trang Sessions (chọn slot tự do trong danh sách trống, hoặc để trống
+ * cho backend tự chọn) và menu trên sơ đồ bãi xe (chọn sẵn preferredSlotId — vẫn có thể đổi lại).
  */
 const CheckInModal = ({ isOpen, toggle, onSuccess, preferredSlotId, preferredSlotCode }) => {
     const [licensePlate, setLicensePlate] = useState('');
     const [vehicleType, setVehicleType] = useState('OToDuoi7Cho');
     const [sessionType, setSessionType] = useState('TheoGio');
     const [photoFile, setPhotoFile] = useState(null);
+    const [slots, setSlots] = useState([]);
+    const [selectedSlotId, setSelectedSlotId] = useState('');
     const [error, setError] = useState(null);
     const [submitting, setSubmitting] = useState(false);
 
@@ -23,8 +26,18 @@ const CheckInModal = ({ isOpen, toggle, onSuccess, preferredSlotId, preferredSlo
             setLicensePlate('');
             setPhotoFile(null);
             setError(null);
+            setSelectedSlotId(preferredSlotId || '');
+
+            if (DEFAULT_PARKING_LOT_ID) {
+                getSlotStatuses(DEFAULT_PARKING_LOT_ID).then(setSlots).catch(() => {});
+            }
         }
-    }, [isOpen]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen, preferredSlotId]);
+
+    const availableSlots = slots.filter(
+        (s) => (s.status === 'Trong' && s.type !== 'DanhChoVeThang') || s.slotId === preferredSlotId
+    );
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -36,7 +49,7 @@ const CheckInModal = ({ isOpen, toggle, onSuccess, preferredSlotId, preferredSlo
                 licensePlate,
                 vehicleType,
                 sessionType,
-                preferredSlotId,
+                preferredSlotId: selectedSlotId || undefined,
             }, photoFile);
             onSuccess();
             toggle();
@@ -73,6 +86,16 @@ const CheckInModal = ({ isOpen, toggle, onSuccess, preferredSlotId, preferredSlo
                             <option value="TheoGio">Theo giờ</option>
                             <option value="TheoNgay">Theo ngày</option>
                         </CustomInput>
+                    </FormGroup>
+                    <FormGroup>
+                        <Label>Slot (không bắt buộc)</Label>
+                        <CustomInput type="select" value={selectedSlotId} onChange={(e) => setSelectedSlotId(e.target.value)}>
+                            <option value="">-- Tự động chọn slot trống --</option>
+                            {availableSlots.map((s) => (
+                                <option key={s.slotId} value={s.slotId}>{s.code} ({s.zoneName})</option>
+                            ))}
+                        </CustomInput>
+                        <small className="text-muted">Chỉ hiển thị slot đang trống. Để trống thì hệ thống tự chọn slot trống đầu tiên.</small>
                     </FormGroup>
                     <FormGroup>
                         <Label>Ảnh check-in (không bắt buộc)</Label>

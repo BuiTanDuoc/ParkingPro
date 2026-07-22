@@ -69,6 +69,7 @@ const CreateUserModal = ({ isOpen, toggle, onSuccess }) => {
                             <option value="Staff">Nhân viên</option>
                             <option value="Manager">Quản lý</option>
                             <option value="Admin">Quản trị viên</option>
+                            <option value="Customer">Khách hàng</option>
                         </CustomInput>
                     </FormGroup>
                 </ModalBody>

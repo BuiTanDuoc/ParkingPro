@@ -57,3 +57,4 @@ TestResult.xml
 nunit-*.xml
 ParkingPro/src/ParkingPro.API/dotnet-tools.json
 ParkingPro/src/ParkingPro.API/Properties/PublishProfiles/FolderProfile.pubxml
+ParkingPro/src/ParkingPro.API/wwwroot/uploads/

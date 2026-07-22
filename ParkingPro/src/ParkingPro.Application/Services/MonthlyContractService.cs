@@ -15,12 +15,15 @@ public class MonthlyContractService : IMonthlyContractService
     private readonly IUnitOfWork _uow;
     private readonly IPricingService _pricingService;
     private readonly IFileStorageService _fileStorage;
+    private readonly IPasswordHasher _passwordHasher;
 
-    public MonthlyContractService(IUnitOfWork uow, IPricingService pricingService, IFileStorageService fileStorage)
+    public MonthlyContractService(
+        IUnitOfWork uow, IPricingService pricingService, IFileStorageService fileStorage, IPasswordHasher passwordHasher)
     {
         _uow = uow;
         _pricingService = pricingService;
         _fileStorage = fileStorage;
+        _passwordHasher = passwordHasher;
     }
 
     public async Task<MonthlyContractDto> CreateAsync(
@@ -30,8 +33,10 @@ public class MonthlyContractService : IMonthlyContractService
         if (request.NumberOfMonths <= 0)
             throw new BadRequestException("Số tháng đăng ký phải lớn hơn 0.");
 
-        var customer = await _uow.Users.GetByIdAsync(request.CustomerUserId, ct)
-            ?? throw new NotFoundException(nameof(User), request.CustomerUserId);
+        var customer = await ResolveCustomerAsync(
+            request.CustomerUserId,
+            request.NewCustomerFullName, request.NewCustomerEmail, request.NewCustomerPassword, request.NewCustomerPhoneNumber,
+            ct);
 
         var vehicle = await _uow.Vehicles.FirstOrDefaultAsync(v => v.LicensePlate == request.LicensePlate, ct);
         var isNewVehicle = vehicle is null;
@@ -176,9 +181,61 @@ public class MonthlyContractService : IMonthlyContractService
         }
 
         contract.AutoRenew = request.AutoRenew;
+
+        // Đổi khách hàng: chỉ xử lý nếu người dùng thật sự chọn khách khác hoặc nhập thông tin tạo mới
+        var wantsCustomerChange = request.CustomerUserId is not null
+            || !string.IsNullOrWhiteSpace(request.NewCustomerEmail);
+        if (wantsCustomerChange)
+        {
+            var newCustomer = await ResolveCustomerAsync(
+                request.CustomerUserId,
+                request.NewCustomerFullName, request.NewCustomerEmail, request.NewCustomerPassword, request.NewCustomerPhoneNumber,
+                ct);
+
+            if (newCustomer.Id != contract.CustomerUserId)
+            {
+                contract.CustomerUserId = newCustomer.Id;
+                contract.CustomerUser = newCustomer;
+            }
+        }
+
+        // Đổi slot cố định: cho phép gán mới, đổi sang slot khác, hoặc bỏ gán (FixedSlotId = null)
+        if (request.FixedSlotId != contract.FixedSlotId)
+        {
+            if (contract.FixedSlotId is not null)
+            {
+                var oldSlot = await _uow.ParkingSlots.GetByIdAsync(contract.FixedSlotId.Value, ct);
+                if (oldSlot is not null)
+                {
+                    oldSlot.Status = SlotStatus.Trong;
+                    oldSlot.Type = SlotType.Thuong;
+                    _uow.ParkingSlots.Update(oldSlot);
+                }
+            }
+
+            if (request.FixedSlotId is not null)
+            {
+                var newSlot = await _uow.ParkingSlots.GetByIdAsync(request.FixedSlotId.Value, ct)
+                    ?? throw new NotFoundException(nameof(ParkingSlot), request.FixedSlotId.Value);
+
+                if (newSlot.Status != SlotStatus.Trong)
+                    throw new ConflictException($"Slot {newSlot.Code} hiện không thể gán cố định (không trống).");
+
+                newSlot.Status = SlotStatus.DaDatTruoc;
+                newSlot.Type = SlotType.DanhChoVeThang;
+                _uow.ParkingSlots.Update(newSlot);
+            }
+
+            contract.FixedSlotId = request.FixedSlotId;
+            contract.FixedSlot = null;
+        }
+
         _uow.MonthlyContracts.Update(contract);
 
-        await _uow.SaveChangesAsync(ct);
+        await _uow.ExecuteInTransactionAsync(async () =>
+        {
+            await _uow.SaveChangesAsync(ct);
+        }, ct);
 
         return await MapToDtoAsync(contract, ct);
     }
@@ -277,6 +334,50 @@ public class MonthlyContractService : IMonthlyContractService
     }
 
     /// <summary>
+    /// Chọn khách hàng cho hợp đồng: dùng tài khoản có sẵn (customerUserId) nếu được truyền,
+    /// ngược lại tạo mới 1 tài khoản Role=Customer từ các field newCustomer* (chưa SaveChanges —
+    /// caller chịu trách nhiệm gọi SaveChangesAsync trong cùng transaction với các thay đổi khác).
+    /// </summary>
+    private async Task<User> ResolveCustomerAsync(
+        Guid? customerUserId, string? newCustomerFullName, string? newCustomerEmail,
+        string? newCustomerPassword, string? newCustomerPhoneNumber, CancellationToken ct)
+    {
+        if (customerUserId is not null)
+        {
+            return await _uow.Users.GetByIdAsync(customerUserId.Value, ct)
+                ?? throw new NotFoundException(nameof(User), customerUserId.Value);
+        }
+
+        if (string.IsNullOrWhiteSpace(newCustomerFullName)
+            || string.IsNullOrWhiteSpace(newCustomerEmail)
+            || string.IsNullOrWhiteSpace(newCustomerPassword))
+        {
+            throw new BadRequestException(
+                "Cần chọn khách hàng có sẵn (CustomerUserId) hoặc nhập đủ họ tên/email/mật khẩu để tạo tài khoản khách hàng mới.");
+        }
+
+        if (newCustomerPassword.Length < 6)
+            throw new BadRequestException("Mật khẩu tài khoản khách hàng mới phải có ít nhất 6 ký tự.");
+
+        var existing = await _uow.Users.FirstOrDefaultAsync(u => u.Email == newCustomerEmail, ct);
+        if (existing is not null)
+            throw new ConflictException("Email này đã được đăng ký.");
+
+        var newCustomer = new User
+        {
+            FullName = newCustomerFullName,
+            Email = newCustomerEmail,
+            PhoneNumber = newCustomerPhoneNumber,
+            PasswordHash = _passwordHasher.Hash(newCustomerPassword),
+            Role = UserRole.Customer,
+            IsActive = true
+        };
+
+        await _uow.Users.AddAsync(newCustomer, ct);
+        return newCustomer;
+    }
+
+    /// <summary>
     /// Map sang DTO, tự fetch Vehicle/CustomerUser/FixedSlot nếu chưa được load kèm (vì
     /// IRepository.Query()/GetByIdAsync không hỗ trợ Include — xem ghi chú tương tự ở SlotService).
     /// Nếu contract được truyền vào đã tự gán sẵn navigation (như lúc CreateAsync) thì không cần fetch lại.
@@ -294,7 +395,9 @@ public class MonthlyContractService : IMonthlyContractService
             c.Id,
             vehicle?.LicensePlate ?? "N/A",
             vehicle?.PhotoUrl,
+            c.CustomerUserId,
             customer?.FullName ?? "N/A",
+            c.FixedSlotId,
             fixedSlot?.Code,
             c.StartDate,
             c.EndDate,
