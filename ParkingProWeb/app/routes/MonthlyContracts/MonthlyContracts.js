@@ -141,7 +141,7 @@ const MonthlyContracts = () => {
             setError('Chưa cấu hình DEFAULT_PARKING_LOT_ID (xem app/config/parkingLot.js).');
             return;
         }
-        getExpiringSoon(DEFAULT_PARKING_LOT_ID, 30).then((res) => setExpiringContracts(res.items)).catch((err) => setError(err.message));
+        getExpiringSoon(DEFAULT_PARKING_LOT_ID, 7).then((res) => setExpiringContracts(res.items)).catch((err) => setError(err.message));
     }, []);
 
     const loadAll = useCallback(() => {
